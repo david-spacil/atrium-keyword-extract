@@ -1,8 +1,12 @@
 # Contributing to the Keyword Extraction of the ATRIUM project
 
-Thank you for your interest in contributing!
-This document describes the development workflow, conventions, and rules for contributors.
-The repository was assembled on 1 October 2026 from the keyword extraction of `atrium-nlp-enrich` and of `atrium-llm-enrich` (atrium-keyword-extract#1); their release histories stay in those repositories.
+Thank you for your interest in contributing! This repository gives archival documents statistical keywords and
+vocabulary-controlled keywords. It is the stage after nlp-enrich in the ATRIUM pipeline (page-classification →
+ocr-postprocess → nlp-enrich → keyword-extract → translator, or digital-convert for born-digital files).
+
+This document is for contributors: the release history, the branches, the pull request and commit formats, and the code
+and test conventions. What the tool does is in `README.md`. How to set it up for development, the layout of the
+repository, its history and the maintainers' working records are in `docs/development.md`.
 
 ## Release History
 
@@ -155,9 +159,8 @@ pytest --cov=. --cov-report=term-missing     # with coverage
 
 > There is **no `slow` marker in this repository** — `grep -rc pytest.mark.slow tests/`
 > returns zero. `pytest -m "not slow"` and a bare `pytest` are the same run, which is
-> what made the old nightly report success having collected nothing (see the v0.19.0
-> row above). Heavy deps are separated by *workflow*, not by marker: `torch` lives in
-> `gpu-inference.yml`, `transformers` in `scheduled-smoke.yml`.
+> what once made a nightly run report success having collected nothing. Heavy dependencies are separated by
+> *workflow*, not by marker: `torch` lives in `gpu-inference.yml`, `transformers` in `scheduled-smoke.yml`.
 
 `tests/test_paradata.py` (`ParadataLogger`, `_sanitise`) is shared across all repos.
 
@@ -207,15 +210,21 @@ self-consistent. Eleven modules do this, and it is the point of each:
 
 Each documentation file has one target audience and one responsibility. Rules are not repeated — cross-references are used instead.
 
-| File                                     | Audience                | Responsibility                                                                          |
-|------------------------------------------|-------------------------|-----------------------------------------------------------------------------------------|
-| `README.md`                              | GitHub visitors         | Project overview, the two kinds of keywords, setup, the batch CLI, licences             |
-| `CONTRIBUTING.md`                        | Developers              | Code conventions, branches, PRs, testing, generated artefacts                           |
-| `service/README.md`                      | API consumers           | REST endpoints, environment variables, limits, errors, the OpenAPI contract             |
-| `data_samples/vocab/RUNBOOK.md`          | **Vocabulary curators** | Every vocabulary script and flag, the eight review sheets, where a decision is recorded |
-| `prompts/RUNBOOK.md`                     | **Prompt reviewers**    | The prompt blocks and their flags, the guardrail's two halves, the output contract      |
-| `data_samples/vocab/6.*.md`              | Domain reviewers        | One question each, with numbers from the sheets beside them; its ruling heads the file  |
-| `agent_dev_logs/DEVLOG.md`               | Maintainers             | Per-issue history: digests, plans, decisions                                            |
+| File                            | Audience                   | Responsibility                                                                           |
+|---------------------------------|----------------------------|------------------------------------------------------------------------------------------|
+| `README.md`                     | GitHub visitors            | What the tool does, inputs and outputs, quick start, limits, the documentation map       |
+| `docs/usage.md`                 | users, integrators         | Setup, the service, the batch CLI, the controlled kind from the command line, the images |
+| `service/README.md`             | operators, integrators     | The service runbook: start, models and caches, errors, limits, settings                  |
+| `service/openapi.json`          | integrators                | The API contract                                                                         |
+| `docs/how-it-works.md`          | anyone who wants the idea  | The two kinds of keyword and the vocabulary                                              |
+| `docs/reference/`               | developers, experts        | The batch CLI's outputs and scores, the licences of a run                                |
+| `data_samples/vocab/RUNBOOK.md` | **Vocabulary curators**    | Every vocabulary script and flag, the eight review sheets, where a decision is recorded  |
+| `prompts/RUNBOOK.md`            | **Prompt reviewers**       | The prompt blocks and their flags, the guardrail's two halves, the output contract       |
+| `data_samples/vocab/6.*.md`     | Domain reviewers           | One question each, with numbers from the sheets beside them; its ruling heads the file   |
+| `docs/development.md`           | developers                 | Setup, tests, the layout and the history; the only pointer to the working records        |
+| `CONTRIBUTING.md`               | contributors               | Release history, branches, PRs, commits, code and test conventions, generated artefacts  |
+
+The maintainers' working records are linked from `docs/development.md` and from no other page.
 
 Where each kind of information belongs, and the checklist for a documentation pull request:
 [`docs/documentation-style.md`](https://github.com/ufal/atrium-project/blob/main/docs/documentation-style.md); Workflow Policy Lint
@@ -281,12 +290,12 @@ For technical questions contact **lutsai.k@gmail.com**
 
 **Issues:** https://github.com/ufal/atrium-keyword-extract/issues
 
-* **Developed by:** UFAL [^7]
+* **Developed by:** ÚFAL [^7]
 * **Funded by:** ATRIUM [^4]
 * **Models:**
   * KeyBERT [^5] with a sentence-transformers model
 
-**© 2026 UFAL & ATRIUM**
+**© 2026 ÚFAL & ATRIUM**
 
 
 [^4]: https://atrium-research.eu/

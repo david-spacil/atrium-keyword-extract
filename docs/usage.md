@@ -1,9 +1,19 @@
 # Using keyword-extract
 
-The service, the batch command line for the statistical kind, the command-line paths of the controlled kind,
-and the images. What each kind does: [how it works](how-it-works.md).
+How to install keyword-extract, run the service, run the batch command line for the statistical kind, run the
+controlled kind from the command line, and use the Docker images. What each kind does:
+[how it works](how-it-works.md).
 
-## Setup
+**On this page:**
+
+- [Set it up](#set-it-up)
+- [Run the service](#run-the-service)
+- [Extract keywords from a folder](#extract-keywords-from-a-folder), and [which setting wins](#which-setting-wins)
+- [Run the controlled kind from the command line](#run-the-controlled-kind-from-the-command-line)
+- [Run the Docker images](#run-the-docker-images)
+- [The command line and the service](#the-command-line-and-the-service): where they differ
+
+## Set it up
 
 ```bash
 git clone https://github.com/ufal/atrium-keyword-extract.git
@@ -17,7 +27,7 @@ KeyBERT downloads its embedding model (`paraphrase-multilingual-MiniLM-L12-v2`) 
 use; set `HF_HOME` to keep the cache. A GPU is used when `torch` finds one. The environment of the service is
 [`.env.example`](../.env.example).
 
-## The service
+## Run the service
 
 [`service/README.md`](../service/README.md) is the reference: the endpoints, the options, the response, the limits,
 the errors and the OpenAPI contract. In short:
@@ -35,31 +45,31 @@ curl -s -X POST localhost:8000/extract_keywords \
   -F "document_json=@CTX000000001.document.json;type=application/json" -F kind=both
 ```
 
-## The batch CLI: `keywords.py`
+## Extract keywords from a folder
 
 > [!NOTE]
-> The command-line form of the statistical kind, for a whole collection at once. It reads what the
-> [service](#the-service) reads, with the same code (`kw_inputs.py`): the CoNLL-U and TEITOK files
+> `keywords.py` is the command-line form of the statistical kind, for a whole collection at once. It reads what the
+> [service](#run-the-service) reads, with the same code (`kw_inputs.py`): the CoNLL-U and TEITOK files
 > [nlp-enrich](https://github.com/ufal/atrium-nlp-enrich) writes, ATRIUM records (`*.document.json`), line tables
 > (`.csv`) and plain text (`.txt`). It writes CSV tables and, when asked, the records. Both run the same three methods.
 
-Extract keywords from your documents by running `keywords.py` on a directory of such files; other files are passed over.
+Run `keywords.py` on a directory of such files; other files are passed over.
 
-### Configuration priority
+### Which setting wins
 
-The keyword extraction script uses a three-tier configuration hierarchy (from highest to lowest priority):
+`keywords.py` takes its settings from three places, from the highest priority to the lowest:
 
 1. **Command-line flags** (e.g., `-m yake`, `-w 3`) always override everything else.
 2. **`kw_config.txt`** (the `[DEFAULTS]` section) is read automatically if placed next to the script.
 3. **Hardcoded fallbacks** are used if no config file or flags are provided.
 
-This means if you configure your settings in `kw_config.txt`, you can simply run:
+So once your settings are in `kw_config.txt`, you can simply run:
 
 ```bash
 python3 keywords.py
 ```
 
-### Backends
+### Choose a method
 
 | Flag value            | Method                                                   | Dependencies                                | Score semantics                       | Best for                                  |
 |-----------------------|----------------------------------------------------------|---------------------------------------------|---------------------------------------|-------------------------------------------|
@@ -132,7 +142,7 @@ python3 keywords.py -i records/ -m yake --per-page --document-json-out-dir recor
 > prevent competing CUDA context initialisation across subprocesses.  On CPU,
 > any worker count is safe.
 
-## The controlled kind from the command line
+## Run the controlled kind from the command line
 
 The three paths and what they read and write are in [how it works](how-it-works.md#the-controlled-kind-and-the-vocabulary).
 
@@ -153,57 +163,37 @@ python llm_run.py --download   # where huggingface.co is reachable: MODEL_KEY in
 python llm_run.py          # or: python llm_run.py <another config>
 ```
 
-A GPU node without internet access (`HF_HUB_OFFLINE=1`) loads a model only from the Hugging Face cache, so
-fetch it first on a machine that has access, into the same `HF_HOME` (`--download KEY ...` takes several keys).
-It fetches what a run reads (configs, tokenizer, weights; not README or LICENSE), skips files already cached
-(huggingface_hub then reports 0 B), and ends with what the cache holds. A run whose model files are not all
-cached stops before loading and names what is missing.
+A GPU node without internet access (`HF_HUB_OFFLINE=1`) loads a model only from the Hugging Face cache. Fetch it first
+on a machine that has access, into the same `HF_HOME`; `--download KEY ...` takes several keys. The download fetches
+what a run reads (configs, tokenizer, weights; not README or LICENSE) and skips files already cached, for which
+huggingface_hub then reports 0 B. It ends with what the cache holds. A run whose model files are not all cached stops
+before loading and names what is missing.
 
-It writes `<OUTPUT_DIR>_<model>/<doc_id>_enriched.json` per document (and `<doc_id>_enriched.abort.json` after ten
-consecutive errors), skips a document whose output already exists, so a stopped job resumes (delete an aborted
-document's two files to redo it), and writes a paradata record naming the vocabulary build and the sha256 of the
-prompt it used. The whole prompt is about 58k tokens: a model served with a smaller window, including the large vLLM
-models at their default `MAX_MODEL_LEN` of 16384, sees only a prefix of the vocabulary, and the paradata records how
-many terms were cut. vLLM computes the prompt's shared part once and reuses it (prefix caching), and so does
-`BACKEND=transformers` with `REUSE_PROMPT_CACHE=true`; without it every line re-reads the whole prompt.
-`PREFILL_CHUNK_SIZE` keeps the transformers prefill within a 24 GB card. Hybrid models
-(Qwen3.5, Qwen3.6) need `flash-linear-attention`, which `requirements_llm.txt` lists: without it their
-linear-attention layers run on a reference kernel that is far slower and does not fit. The `llm` image carries no
-sample inputs, and whatever it writes outside `/data` goes with the container, so point `INPUT_DIR`, `OUTPUT_DIR`
-and `PARADATA_DIR` under `/data` in the `llm_config.txt` the compose file mounts.
+What the research run does:
 
-## The command line and the service
+- It writes `<OUTPUT_DIR>_<model>/<doc_id>_enriched.json` per document, and `<doc_id>_enriched.abort.json` after ten
+  consecutive errors.
+- It skips a document whose output already exists, so a stopped job resumes. To redo an aborted document, delete its
+  two files.
+- It writes a paradata record that names the vocabulary build and the sha256 of the prompt it used.
 
-`keywords.py` and `POST /extract_keywords` read every input through [kw_inputs.py](../kw_inputs.py), run the same
-methods (`keywords.extract_from_texts`) and write the record's `keywords` block through the same writer
-(`llm_client_shared.write_document_record`), so the same input gives the same keywords, per document and per page,
-and the same licence components in the paradata (atrium-project#72;
-[tests/test_cli_service_parity.py](../tests/test_cli_service_parity.py)). Both take their defaults from
-`kw_config.txt`: `METHOD` and `NUM_KEYWORDS` (the service's `DEFAULT_KW_METHOD` setting overrides its method), and the
-KeyBERT model, `MAX_WORDS`, MMR and diversity. Where they differ:
+The whole prompt is about 58k tokens. A model served with a smaller window sees only a prefix of the vocabulary, and
+the paradata records how many terms were cut. The large vLLM models do this at their default `MAX_MODEL_LEN` of 16384.
 
-| What                         | Command line                                                       | Service                                                           | Why they differ                                              |
-|------------------------------|--------------------------------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------|
-| How much per run             | a folder                                                           | one document per request                                          | the service is stateless                                     |
-| The record                   | `*.document.json` in the folder; `--document-json-out-dir`         | `document_json`                                                   |                                                              |
-| CoNLL-U, TEITOK, CSV, `.txt` | files in the folder                                                | the `file` part (with `document_json`, the record gets the block) |                                                              |
-| Lines as JSON                | none; write them to a `.txt`                                       | `POST /extract_keywords_text`                                     | an HTTP convenience                                          |
-| Per page                     | `--per-page` (off by default)                                      | `per_page` (on by default)                                        | the CSV outputs of a batch run stay as they were             |
-| Pages of a CoNLL-U file      | none                                                               | none                                                              | CoNLL-U carries no pages: send the record or the TEITOK file |
-| KER without lemmas           | an empty row                                                       | 422                                                               | a batch run goes on; a call is told why it got nothing       |
-| A document with no text      | an empty row                                                       | 422                                                               | the same                                                     |
-| Language                     | `-l`: any language YAKE has stop words for                         | `lang`: `cs` only                                                 | the service is Czech-pinned in v1                            |
-| KeyBERT and YAKE settings    | `-w`, `--keybert-model`, `--no-mmr`, `--diversity`, `--batch_size` | `kw_config.txt` in the image                                      | deployment settings, not request fields                      |
-| Limits                       | none                                                               | `MAX_DOCUMENT_WORDS` (413), `MAX_KEYWORDS` (422), `MAX_UPLOAD_MB` | the service bounds what one request may cost                 |
-| The controlled kind          | `openrouter_client.py`, `ollama_client.py`; `llm_run.py` on a GPU  | `kind=controlled\|both`                                           | the LLM backend is configured per deployment in the service  |
-| Outputs                      | CSV tables, the records                                            | JSON, with the record                                             |                                                              |
-| Paradata                     | a file in `--paradata-dir` (program `keyword-extract`)             | the response's `paradata`, a `CreateAction`                       | atrium-project#71                                            |
+To keep the run fast and within memory:
 
-KER (`legacy`) counts lemmas, and where they come from depends on the input: CoNLL-U and TEITOK give every noun's,
-proper noun's and adjective's lemma; a record gives `lines[].lemma`, which no ATRIUM tool writes today; a CSV or a
-`.txt` gives none. The pages' lemmas come from a record only.
+- vLLM computes the prompt's shared part once and reuses it (prefix caching). So does `BACKEND=transformers` with
+  `REUSE_PROMPT_CACHE=true`; without it, every line re-reads the whole prompt.
+- `PREFILL_CHUNK_SIZE` keeps the transformers prefill within a 24 GB card.
+- Hybrid models (Qwen3.5, Qwen3.6) need `flash-linear-attention`, which `requirements_llm.txt` lists. Without it their
+  linear-attention layers run on a reference kernel that is far slower and does not fit.
 
-## Docker
+The `llm` image carries no sample inputs, and whatever it writes outside `/data` goes with the container. Point
+`INPUT_DIR`, `OUTPUT_DIR` and `PARADATA_DIR` under `/data` in the `llm_config.txt` the compose file mounts.
+
+## Run the Docker images
+
+The Dockerfile builds three images, one per target:
 
 | Target | Image                                     | What it is                                                          |
 |--------|-------------------------------------------|---------------------------------------------------------------------|
@@ -217,5 +207,33 @@ docker compose run --rm kw -i /data/UDP -m yake       # the batch CLI
 docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile llm run --rm kw-llm
 ```
 
-The images of `atrium-nlp-enrich` (its `-llm` target) and `atrium-llm-enrich` that carried these stages before
-1 October 2026 stay published for consumers pinned to them and receive no new tags.
+## The command line and the service
+
+`keywords.py` and `POST /extract_keywords` read every input through [kw_inputs.py](../kw_inputs.py). They run the same
+methods (`keywords.extract_from_texts`) and write the record's `keywords` block through the same writer
+(`llm_client_shared.write_document_record`). So the same input gives the same keywords, per document and per page,
+and the same licence components in the paradata; [tests/test_cli_service_parity.py](../tests/test_cli_service_parity.py)
+checks this. Both take their defaults from `kw_config.txt`: `METHOD` and `NUM_KEYWORDS` (the service's
+`DEFAULT_KW_METHOD` setting overrides its method), and the KeyBERT model, `MAX_WORDS`, MMR and diversity. Where they
+differ:
+
+| What                         | Command line                                                       | Service                                                           | Why they differ                                              |
+|------------------------------|--------------------------------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------|
+| How much per run             | a folder                                                           | one document per request                                          | the service is stateless                                     |
+| The record                   | `*.document.json` in the folder; `--document-json-out-dir`         | `document_json`                                                   |                                                              |
+| CoNLL-U, TEITOK, CSV, `.txt` | files in the folder                                                | the `file` part (with `document_json`, the record gets the block) |                                                              |
+| Lines as JSON                | none; write them to a `.txt`                                       | `POST /extract_keywords_text`                                     | an HTTP convenience                                          |
+| Per page                     | `--per-page` (off by default)                                      | `per_page` (on by default)                                        | the CSV outputs of a batch run stay as they were             |
+| Pages of a CoNLL-U file      | none                                                               | none                                                              | CoNLL-U carries no pages: send the record or the TEITOK file |
+| KER without lemmas           | an empty row                                                       | 422                                                               | a batch run goes on; a call is told why it got nothing       |
+| A document with no text      | an empty row                                                       | 422                                                               | the same                                                     |
+| Language                     | `-l`: any language YAKE has stop words for                         | `lang`: `cs` only                                                 | the service takes Czech only                                 |
+| KeyBERT and YAKE settings    | `-w`, `--keybert-model`, `--no-mmr`, `--diversity`, `--batch_size` | `kw_config.txt` in the image                                      | deployment settings, not request fields                      |
+| Limits                       | none                                                               | `MAX_DOCUMENT_WORDS` (413), `MAX_KEYWORDS` (422), `MAX_UPLOAD_MB` | the service bounds what one request may cost                 |
+| The controlled kind          | `openrouter_client.py`, `ollama_client.py`; `llm_run.py` on a GPU  | `kind=controlled\|both`                                           | the LLM backend is configured per deployment in the service  |
+| Outputs                      | CSV tables, the records                                            | JSON, with the record                                             |                                                              |
+| Paradata                     | a file in `--paradata-dir` (program `keyword-extract`)             | the response's `paradata`, a `CreateAction`                       | the service keeps no files                                   |
+
+KER (`legacy`) counts lemmas, and where they come from depends on the input. CoNLL-U and TEITOK give every noun's,
+proper noun's and adjective's lemma. A record gives `lines[].lemma`, which no ATRIUM tool writes today. A CSV or a
+`.txt` gives none. The pages' lemmas come from a record only.

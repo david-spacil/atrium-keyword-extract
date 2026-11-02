@@ -990,3 +990,16 @@ this file is a derived reading aid in `agent_dev_logs/`._
 * README's YAKE limit, `docs/reference/licences.md` and the runbook's `paradataRecord` line list components; the
   "calculated licence summary" is named once, as an older field, with the hub's link (motyc, 10-29).
 * **Checks:** 1021 passed, 7 skipped, as before.
+
+## 2026-11-02 — atrium-project#79 phase F, tool round: the docs for each kind of reader
+
+Documentation only; no code, test or configuration change.
+* **F3:** `docs/development.md` § Working records is the one Markdown pointer into `agent_dev_logs/`; other pages cite
+  the issue. CONTRIBUTING's documentation table follows the hub template.
+* **F4:** the opening is 76 words; the "assembled on 1 October 2026" paragraph moved to the new `docs/development.md`; the prompt-size limit gives both estimates (about 40,000 tokens at 4 characters a token, about 58,000 at 3.35).
+* **F5:** the runbook follows the template's order, with "At a glance" under Start and "Shutdown behaviour"; tracker
+  shorthand and version history are out of its running text. Errors moved before Limits.
+* **F6/F7:** task headings on `docs/usage.md`; sentence passes on `reference/licences.md` and `how-it-works.md`. The vocabulary decision packages are unchanged.
+* **Map:** the hub's `agent_dev_logs/plans/79.F-relocation_map.md` § atrium-keyword-extract (every moved block, corrected facts,
+  renamed anchors).
+* **Checks:** `docs_check` and `runbook_check` pass; 1021 passed, 7 skipped, as at the head.
