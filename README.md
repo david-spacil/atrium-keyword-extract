@@ -85,8 +85,8 @@ ATRIUM](https://marketplace.sshopencloud.eu/tool-or-service/j9fqxo).
   shares the start of the word it began ([Known limits](service/README.md#known-limits)).
 - **The prompt is about 58k tokens.** A model served with a smaller window sees only part of the vocabulary; the
   paradata records how many terms were cut.
-- **YAKE is AGPL-3.0:** a run that uses it lists YAKE among its components, so the run's calculated licence
-  summary becomes AGPL-3.0; that summary is not the licence of the keywords ([licences](docs/reference/licences.md)).
+- **YAKE is AGPL-3.0:** a run that uses it lists YAKE among its components. That licence is YAKE's, not the
+  licence of the keywords ([licences](docs/reference/licences.md)).
 - **The research path (`llm_run.py`) needs a GPU** and local weights; the service needs neither.
 
 ## Documentation

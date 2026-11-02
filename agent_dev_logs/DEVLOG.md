@@ -984,3 +984,9 @@ this file is a derived reading aid in `agent_dev_logs/`._
 * **Release:** v1.6.1-beta in `CITATION.cff`, `para_config.txt`, the spec's version; CONTRIBUTING row; the service
   README's version example.
 * **Checks:** 1058 passed, 5 skipped; pre-commit clean.
+
+## 2026-11-02 — The calculated licence out of the docs (atrium-project#6)
+
+* README's YAKE limit, `docs/reference/licences.md` and the runbook's `paradataRecord` line list components; the
+  "calculated licence summary" is named once, as an older field, with the hub's link (motyc, 10-29).
+* **Checks:** 1021 passed, 7 skipped, as before.

@@ -174,8 +174,8 @@ validate — only ever because the record sent did not.
 
 `paradata` is the run's Process Run Crate `CreateAction` (atrium-project#71): its `@id` is the run's
 `run_uuid`, `object` is what the call was sent, `result` the keywords it answered with and the record
-blocks it wrote, and `paradataRecord` the paradata itself, including the licence of the run computed from
-the methods and the vocabularies used. `limits_applied` lists every limit that shaped the result without
+blocks it wrote, and `paradataRecord` the paradata itself, including the methods and vocabularies the run used,
+each with its licence. `limits_applied` lists every limit that shaped the result without
 refusing it: a KeyBERT document chunked, a chunk over the encoder's window, vocabulary terms left out of
 the prompt (`vocab_prompt_budget_tokens`, `trimmed`), lines whose reply was cut (`llm_max_new_tokens`,
 `skipped`), a document given up after too many failed lines (`llm_max_consecutive_errors`, `stopped`).

@@ -1,17 +1,17 @@
 # Licences
 
 The code is **MIT**. Each run lists the components it used, each with its licence, as declared in
-[`para_config.txt`](../../para_config.txt). From that list the shared module `para_licenses.py` computes one more
-field, `license`, the most restrictive of the component licences. **That field is a calculated summary of the
-components, not the licence of the keywords**: the rights in an output depend first on the source document, and they
-are stated by whoever holds them (for the AMČR pilot, AMČR; agreed on 22 October 2026,
-[atrium-project#6](https://github.com/ufal/atrium-project/issues/6)).
+[`para_config.txt`](../../para_config.txt). **None of them is the licence of the keywords**: the rights in an output
+depend first on the source document, and they are stated by whoever holds them (for the AMČR pilot, AMČR; agreed on
+22 October 2026, [atrium-project#6](https://github.com/ufal/atrium-project/issues/6)). The paradata's `license` field
+is an older calculated value, not a licence
+([Licences and paradata](https://ufal.github.io/atrium-project/ecosystem/licences/)).
 
 | Component                                                   | Licence          | When                                                                         |
 |-------------------------------------------------------------|------------------|------------------------------------------------------------------------------|
 | the legacy method (lemma frequency; this repository's code) | MIT              | `method=legacy`                                                              |
 | KeyBERT, sentence-transformers, the embedding model         | MIT / Apache-2.0 | `method=keybert`                                                             |
-| **YAKE**                                                    | **AGPL-3.0**     | `method=yake`: a run that uses it lists it, and the summary becomes AGPL-3.0 |
+| **YAKE**                                                    | **AGPL-3.0**     | `method=yake`: a run that uses it lists it                                   |
 | AMČR and TEATER vocabularies                                | CC0              | the vocabulary build, the controlled kind                                    |
 
 The language model of the controlled kind has no row: its terms depend on the model a deployment chooses
