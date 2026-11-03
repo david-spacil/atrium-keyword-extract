@@ -12,6 +12,7 @@ ENV ATRIUM_RUNNER_IMAGE=${ATRIUM_RUNNER_IMAGE} \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=60 \
     HF_HOME=/cache/huggingface
 
 # ── Distro security patches, applied at build time ───────────────────────────
@@ -144,10 +145,15 @@ COPY requirements_llm.txt ./
 
 # requirements_llm.txt carries no torch pin (vllm pins torch exactly; see the file's header). The
 # sed stays as a guard: a `torch==` line added back by hand would make the install unsatisfiable.
+# pytorch.org's CDN can stall a download mid-wheel: on 2026-11-03 keyword-extract's `llm` build failed on
+# "Read timed out" at 25.7 of 196.2 MB of the CPU torch wheel. Up to three attempts, 20 s apart; the base
+# stage's PIP_DEFAULT_TIMEOUT=60 also lets a stall last 60 s instead of pip's 15.
 RUN sed -i '/^torch==/d' requirements_llm.txt \
-    && pip install \
-        --extra-index-url https://download.pytorch.org/whl/cpu \
-        -r requirements_llm.txt
+    && for attempt in 1 2 3; do \
+        pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements_llm.txt && break; \
+        [ "$attempt" = 3 ] && exit 1; \
+        echo "pip install failed (attempt $attempt of 3); retrying in 20 s"; sleep 20; \
+    done
 
 # Same arbitrary-UID ownership as `base` (atrium:0, g=u), re-applied to what this stage adds.
 RUN chown -R atrium:0 /app /home/atrium \
