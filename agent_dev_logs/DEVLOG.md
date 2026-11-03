@@ -1011,3 +1011,10 @@ Documentation only; no code, test or configuration change.
 * **`pydantic==2.13.5`** in `requirements.txt`, as the tests and `requirements_llm.txt` pin it (the image shipped 2.14.2).
 * `httpx2` beside `httpx` (Starlette prefers it); pre-commit `ruff-check`; the weekly scan targets `-api`.
 * **Checks:** 1021 passed, 7 skipped without torch, as before; with torch and transformers 5.x, the LLM tests 68 passed; no INFO line under `LOG_LEVEL=WARNING`.
+
+## 2026-11-03 — v1.6.2-beta
+
+* **Version:** v1.6.1-beta → v1.6.2-beta in `para_config.txt`, `CITATION.cff`, `service/openapi.json`, `service/README.md`'s example, and the three vocabulary sidecars (`python vocab_build.py --from-flat --skos`: only `tool_version` and `generated_utc` change). `CITATION.cff` `date-released` 2026-11-03.
+* **CONTRIBUTING.md:** the release row. It covers the 11-02 licence wording (atrium-project#6), the documentation
+  round (#79) and the 11-03 CI fixes, with the hub's workflows pinned to `6a10787` (the pin sweep, committed
+  before this one).
