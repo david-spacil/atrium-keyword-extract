@@ -2,8 +2,8 @@
 tests/test_cli_orchestration.py — every CLI entry point at least parses its arguments.
 
 Lived in ``api_util/`` until 2026-09, outside ``pytest.ini``'s ``testpaths``, so none of
-these ever ran. ``llm_run.py`` imports torch/transformers/pysqlite3 at module scope and is
-skipped on the fast lane without them, the same GPU-lane convention as test_llm_run.py.
+these ever ran. ``llm_run.py`` imports torch and transformers at module scope and is
+skipped where they are missing, as test_llm_run.py is; pysqlite3 is optional there.
 """
 
 import importlib.util
@@ -21,8 +21,8 @@ def _missing(*modules):
 
 
 @pytest.mark.skipif(
-    bool(_missing("torch", "transformers", "pysqlite3")),
-    reason="llm_run.py needs the GPU-lane requirements (torch, transformers, pysqlite3)",
+    bool(_missing("torch", "transformers")),
+    reason="llm_run.py imports torch and transformers (pysqlite3 is optional there)",
 )
 def test_llm_run_cli_help():
     """Ensure the LLM orchestration script compiles and parses arguments."""

@@ -5,10 +5,12 @@ Schema construction, system-prompt assembly with its token-budget truncation, th
 passthrough (issue #6, B2/B3/C4), and the abort-marker sidecar. The runtime loop
 (process_document*) needs a real model and is exercised only in the slow GPU lane.
 
-Same GPU-lane convention as test_llm_utils.py: llm_run imports torch, transformers and
-pysqlite3 at module scope, so this file skips entirely on a machine without them (the
-fast CI lane) rather than failing. The schema/truncation/abort-marker cases came with
-llm-enrich's copy of the engine (atrium-digital-convert 31534d5, atrium-keyword-extract#1).
+llm_run imports torch and transformers at module scope, so this file skips on a machine without
+them rather than failing; the docker-tool test lane has both (through sentence-transformers), so
+it runs there. pysqlite3 is optional in llm_run.py itself (it stands in for an old system SQLite)
+and is not required here: requiring it skipped this file in every CI lane. The schema, truncation
+and abort-marker cases came with llm-enrich's copy of the engine (atrium-digital-convert 31534d5,
+atrium-keyword-extract#1).
 """
 
 import json
@@ -17,7 +19,6 @@ import pytest
 
 pytest.importorskip("torch")
 pytest.importorskip("transformers")
-pytest.importorskip("pysqlite3")
 
 import llm_run  # noqa: E402
 

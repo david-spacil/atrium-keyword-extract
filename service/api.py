@@ -1215,4 +1215,8 @@ if __name__ == "__main__":
         # (12-factor IX) Disposability: bounds uvicorn's wait for in-flight requests;
         # serve_lifecycle() adds its own drain on top. (issue #55)
         timeout_graceful_shutdown=int(os.getenv("GRACEFUL_SHUTDOWN_S", "20")),
+        # LOG_LEVEL governs uvicorn's own records too, its start-up lines and its access log: the level
+        # basicConfig() set above, so `WARN` and the other spellings logging accepts work here too.
+        # Without it uvicorn logged INFO under LOG_LEVEL=WARNING (atrium-project#61).
+        log_level=logging.getLogger().getEffectiveLevel(),
     )

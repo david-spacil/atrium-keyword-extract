@@ -2,7 +2,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.18
     hooks:
-      - id: ruff          # lint (reads ./ruff.toml) — advisory, matches the other ATRIUM repos
+      - id: ruff-check    # lint (reads ./ruff.toml) — advisory, matches the other ATRIUM repos
         args: [ --fix ]
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0

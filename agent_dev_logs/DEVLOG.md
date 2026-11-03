@@ -1003,3 +1003,11 @@ Documentation only; no code, test or configuration change.
 * **Map:** the hub's `agent_dev_logs/plans/79.F-relocation_map.md` § atrium-keyword-extract (every moved block, corrected facts,
   renamed anchors).
 * **Checks:** `docs_check` and `runbook_check` pass; 1021 passed, 7 skipped, as at the head.
+
+## 2026-11-03 — What the green CI runs on the 11-02 `test` head hid (atrium-project, CI audit)
+
+* **uvicorn gets the configured log level:** `uvicorn.run(…, log_level=…)` in `service/api.py`. Under `LOG_LEVEL=WARNING` uvicorn still logged its start-up lines and the access log, and the hub's probe, which read only the service's own format, reported none.
+* **`llm_run` tests run:** `tests/test_llm_run.py` and `tests/test_cli_orchestration.py` no longer skip without pysqlite3, which `llm_run.py` treats as optional. Every lane had skipped them. `lm-format-enforcer` (45 KB) joins `requirements-test.txt`, so the enum-index test runs too.
+* **`pydantic==2.13.5`** in `requirements.txt`, as the tests and `requirements_llm.txt` pin it (the image shipped 2.14.2).
+* `httpx2` beside `httpx` (Starlette prefers it); pre-commit `ruff-check`; the weekly scan targets `-api`.
+* **Checks:** 1021 passed, 7 skipped without torch, as before; with torch and transformers 5.x, the LLM tests 68 passed; no INFO line under `LOG_LEVEL=WARNING`.

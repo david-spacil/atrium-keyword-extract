@@ -10,13 +10,12 @@ jsonschema
 # service/requirements.txt).
 fastapi==0.141.1
 pydantic==2.13.5
-# httpx, NOT httpx2, even though starlette's TestClient warns that httpx is
-# deprecated and the other three service repos already declare httpx2. Swapping it
-# here breaks the transformers stack, which reaches httpx through huggingface_hub,
-# and tests/test_service_requirements.py asserts this name specifically. Treat the
-# deprecation as an ecosystem-wide migration, not a per-repo tidy-up.
-# (issue atrium-project#10)
+# httpx AND httpx2. httpx stays: swapping it out breaks the transformers stack, which reaches
+# httpx through huggingface_hub, and tests/test_service_requirements.py asserts this name
+# specifically (issue atrium-project#10). httpx2 is added beside it: starlette's TestClient takes
+# httpx2 when it is installed, which ends its "httpx is deprecated" warning in every lane.
 httpx
+httpx2
 python-multipart
 openapi-spec-validator
 # tests/test_env_contract.py parses docker-compose.yaml to confirm the env-var
@@ -33,6 +32,9 @@ lxml
 # lane, which installs only the test deps, runs tests/test_api_contract.py's controlled-kind tests
 # instead of erroring at their setup.
 tqdm
+# tests/test_llm_utils.py checks the enum index against lm-format-enforcer's own parser and skipped
+# without it. Small (pure Python, with interegular); requirements_llm.txt has it for the GPU target.
+lm-format-enforcer
 # Optional heavy deps only if the suite truly needs them. transformers is installed by
 # scheduled-smoke.yml rather than here, but pulls tokenizers/safetensors, which is too much
 # for every PR. torch stays in gpu-inference.yml, where a GPU actually exists.

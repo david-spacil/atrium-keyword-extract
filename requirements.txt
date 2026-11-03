@@ -7,7 +7,7 @@ requests
 yake
 keybert
 sentence-transformers
-pydantic>=2.13.5
+pydantic==2.13.5
 lxml
 # atrium_document.validate_document() / atrium_paradata read the shared contract. Declared in the
 # RUNTIME set, not only in requirements-test.txt: validate_document() raises RuntimeError rather

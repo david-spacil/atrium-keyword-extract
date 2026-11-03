@@ -10,10 +10,10 @@
 # fastapi and pydantic are pinned EXACTLY (atrium-project#32 round 2): the committed
 # service/openapi.json -- attached to every release, and what the AMČR pipeline generates its
 # clients from -- is a function of the code AND of these two versions, and the image is built at
-# tag time. requirements-test.txt pins the same two (and requirements.txt's `pydantic>=2.13.5` and
-# requirements_llm.txt's `pydantic==2.13.5` agree with them); tests/test_openapi_contract.py fails
-# when the pins disagree or the installed versions differ. Bump them together, by hand, and
-# regenerate the spec (dependabot ignores both):
+# tag time. requirements-test.txt pins the same two (and the `pydantic==2.13.5` in requirements.txt
+# and requirements_llm.txt agrees with them, so every image ships the version the tests run);
+# tests/test_openapi_contract.py fails when the pins disagree or the installed versions differ.
+# Bump them together, by hand, and regenerate the spec (dependabot ignores both):
 # python atrium_openapi.py export --app service.api:app
 fastapi==0.141.1
 pydantic==2.13.5

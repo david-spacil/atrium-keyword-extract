@@ -50,4 +50,4 @@ jobs:
     # (Trivy/SBOM read a public GHCR image, version-check reads the tree).
     # It previously carried `secrets: inherit` for no reason (#18).
     with:
-      image-ref: ghcr.io/ufal/atrium-keyword-extract:latest
+      image-ref: ghcr.io/ufal/atrium-keyword-extract-api:latest
