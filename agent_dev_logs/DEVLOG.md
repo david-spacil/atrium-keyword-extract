@@ -1047,3 +1047,10 @@ Documentation only; no code, test or configuration change.
   `python3 scripts/pin_hub_reusables.py --sha <that commit>` from the hub so the pins and these copies land in one
   commit (para-drift compares them with the hub at the pin); then tag.
 * **Checks:** the suite on Python 3.11 with `requirements-test.txt` (the release lane, no torch): 1030 passed, 7 skipped; `tests/test_openapi_contract.py` 12 of 12 against the app; `check_version.py --tag` agrees; the shared selftests pass; ruff clean.
+
+## 2026-11-04 (after the push) — v1.6.3-beta: the tag fixed
+
+* The first tag was `v1.6.3.-beta` (a stray dot) at `a137011`; no run was created for it, and the version gate would
+  have refused it. `v1.6.3-beta` was pushed at 10:18Z; its Release run is 41813324882.
+* **Left:** an admin deletes `v1.6.3.-beta` (the `v*` ruleset refuses everyone else; GitHub logs the bypass).
+* Every push run on `a137011` (`master`) is green, para-drift included; the `test` push created no runs.
