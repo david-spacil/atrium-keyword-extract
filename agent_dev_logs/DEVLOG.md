@@ -1054,3 +1054,13 @@ Documentation only; no code, test or configuration change.
   have refused it. `v1.6.3-beta` was pushed at 10:18Z; its Release run is 41813324882.
 * **Left:** an admin deletes `v1.6.3.-beta` (the `v*` ruleset refuses everyone else; GitHub logs the bypass).
 * Every push run on `a137011` (`master`) is green, para-drift included; the `test` push created no runs.
+
+## 2026-11-04 (later) — v1.6.4-beta prepared: v1.6.3-beta released under the next number
+
+* **Why:** v1.6.3-beta was tagged but not released: its CVE gate on the `llm` image stopped on `stream error: stream ID 5; PROTOCOL_ERROR` while Trivy pulled a layer, with no finding (run 41813324882; the first tag, `v1.6.3.-beta`, was mistyped and created no run). The maintainer's decision: release the same code as v1.6.4-beta
+  rather than repair the v1.6.3-beta tag (the `v*` ruleset lets only an admin move or delete it).
+* **Version v1.6.4-beta** (prepared, not tagged): `para_config.txt`, `CITATION.cff`, `service/openapi.json` (version only), `service/README.md`, the three vocabulary sidecars (`vocab_build.py --from-flat --skos`); the `CONTRIBUTING.md` row. No code changes against v1.6.3-beta.
+* **Hub:** the CVE gate now runs once more after a 30 s pause, and the report-only scan's retry waits 30 s
+  (atrium-project#81). Both reach this repository with the pin sweep committed with this version.
+* **Yours:** push the hub and move `v1`; here, `python3 scripts/pin_hub_reusables.py --sha <v1>` from the hub, committed
+  with these files; push `test`; then push the tag `v1.6.4-beta` on its own.
