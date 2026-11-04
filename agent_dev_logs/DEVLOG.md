@@ -1027,3 +1027,23 @@ Documentation only; no code, test or configuration change.
   `PIP_RESUME_RETRIES` would not help here: the `python:3.11` images ship a pip that predates it.
 * **Hub pin:** the callers move to the hub commit that turns the build cache off on tags (a tag run cannot read
   the `test` caches) and lists each CRITICAL and HIGH finding in the scan summary.
+
+## 2026-11-04 — v1.6.3-beta prepared: no licence asserted on a crate (atrium-project#6)
+
+* **Shared modules (atrium-project#6, step 1 of the rights proposal; re-vendored from the hub, byte-identical):**
+  * `atrium_rocrate.py`: a document or run crate's root `license` names `#no-licence-asserted`, a contextual
+    entity that asserts nothing (the rights depend on the source and on AMČR's permission). The calculated
+    licence is no longer exported as the crate's. A fragment carries no licence entity; `--wrap` gives its stub
+    root `#no-licence-asserted`.
+  * `atrium_document.py` and the schema: a record marks its calculated `provenance.license` with
+    `provenance.license_basis: "calculated"` (declared, optional, `calculated` only; registered in
+    `tests/test_schema_freeze.py`). `service/openapi.json` carries the new record schema.
+  * `para_licenses.py`: the notes list the components and say that no output licence is asserted; the
+    "Effective output license is X, the most restrictive among N" sentence is gone.
+  * Tests: `tests/test_atrium_rocrate.py`, `tests/test_document_originators.py`, `tests/test_schema_freeze.py`.
+* **Vocabulary sidecars:** `python vocab_build.py --from-flat --skos` re-stamped the three `*_nested.meta.json` (only `tool_version` and `generated_utc` change).
+* **Version v1.6.3-beta** (prepared, not tagged): `para_config.txt`, `CITATION.cff` (`date-released` 2026-11-04), `service/openapi.json`, the version examples in `service/README.md`; the `CONTRIBUTING.md` row.
+* **Yours:** push the hub first and move `v1` to it; then, in this repository, run
+  `python3 scripts/pin_hub_reusables.py --sha <that commit>` from the hub so the pins and these copies land in one
+  commit (para-drift compares them with the hub at the pin); then tag.
+* **Checks:** the suite on Python 3.11 with `requirements-test.txt` (the release lane, no torch): 1030 passed, 7 skipped; `tests/test_openapi_contract.py` 12 of 12 against the app; `check_version.py --tag` agrees; the shared selftests pass; ruff clean.
