@@ -1,5 +1,5 @@
 # 📓 atrium-keyword-extract — agent_dev_logs/DEVLOG.md (timeline index)
-> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 1 open issue: #2 (research, deferred past the pilot, atrium-project#67); #1 closed 2026-10-12 (its pair removed 2026-10-21). `test` = `70e3bc4` (2026-10-28) · **v1.5.1-beta** (2026-10-27); v1.6.0-beta prepared on 2026-10-28._
+> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 1 open issue: #2 (research, deferred past the pilot, atrium-project#67); #1 closed 2026-10-12 (its pair removed 2026-10-21). **Pilot release: v1.6.4-beta** (`0d5a2f3`, 2026-11-04; immutable, with `images.json`; atrium-project#77); v1.6.3-beta and the mistyped `v1.6.3.-beta` were tagged, not released. Hub workflows pinned to `51aad6c` (`v1`). Latest entry: 2026-11-04 (afternoon)._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Entries before 2026-10-01 are atrium-nlp-enrich's, where #2 was #6. Cross-repo history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md`._
 
 ## 2026-04-17
@@ -1064,3 +1064,9 @@ Documentation only; no code, test or configuration change.
   (atrium-project#81). Both reach this repository with the pin sweep committed with this version.
 * **Yours:** push the hub and move `v1`; here, `python3 scripts/pin_hub_reusables.py --sha <v1>` from the hub, committed
   with these files; push `test`; then push the tag `v1.6.4-beta` on its own.
+
+## 2026-11-04 (afternoon) — The pilot release out; records and comments aligned
+
+* **Released:** v1.6.4-beta (11:20Z, release run 41817846546), the pilot release (atrium-project#77). v1.6.3-beta and the mistyped `v1.6.3.-beta` stay tags without a release; the `.3` CONTRIBUTING row now says so.
+* **#6 wording:** the licence rationale in `para_config.txt` calls the most-restrictive value the run's calculated licence label, not the output's licence (the file still parses; version v1.6.4-beta).
+* **Records:** the header names the pilot release.

@@ -16,7 +16,8 @@ repository_fallback = https://github.com/ufal/atrium-keyword-extract
 #
 # License rationale (see ATRIUM issue #6 licensing breakdown):
 #   * No component is "always": which licences apply depends on the method a run uses,
-#     and the license of a run is the most restrictive of the components it logged.
+#     and the run's calculated licence label is the most restrictive of the components it
+#     logged; it is not the licence of the output (atrium-project#6).
 #   * KER (the legacy lemma-frequency method of nlp-enrich) is stdlib-only; it adds no
 #     third-party license, so the repo MIT base applies for KER-only runs.
 #   * KeyBERT is MIT and pulls in sentence-transformers (Apache-2.0); the default embedding
