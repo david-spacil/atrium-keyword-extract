@@ -1,0 +1,259 @@
+# Strategy — Hierarchical decision calls over the controlled vocabulary (for [#2](https://github.com/ufal/atrium-keyword-extract/issues/2), from [page-classification#58](https://github.com/ufal/atrium-page-classification/issues/58))
+
+> _Drafted **2026-11-05** at `v1.6.4-beta` (the checkout's head `c084d61`). This is a fourth option for #2's
+> controlled kind, beside the constrained prompt (shipped), Options 1 + 2 (shipped in `v1.4.0-beta`) and Option 3
+> (free decoding, then resolution; after the pilot). It is this repository's part of the cross-repository plan for
+> decision models, anchored on [page-classification#58](https://github.com/ufal/atrium-page-classification/issues/58)
+> and its [plan](https://github.com/ufal/atrium-page-classification/blob/test/agent_dev_logs/plans/58.plan.md).
+> Evidence on #2: [`../digests/2.digest.md`](../digests/2.digest.md) · [`2.plan.md`](2.plan.md). Nothing has been
+> run._
+
+**Status**: 🧪 **Research, offline, under #2's rulings.**
+- #2 is deferred past the pilot ([atrium-project#67](https://github.com/ufal/atrium-project/issues/67)), and the
+  pilot keeps the constrained vocabulary (motyc, 10-22).
+- This plan changes no service, prompt, default or record field.
+- It produces runs that `score_categories.py` reads beside the R3 runs. They enter the gold comparison motyc asked
+  for under D2.
+
+## Context
+
+**The controlled kind today.** A generative LLM (`qwen-3.8-27b-it` by default since `v1.4.0-beta`) reads each line,
+its context and the whole vocabulary in one prompt. It returns `extracted_keywords_cs/en`, one `teater_category` (a
+vocabulary term or the meta-text sentinel), `confidence_score` and `teater_category_ids`. #2 has measured three
+faults:
+
+| Fault                                                                                                                                                                                                          | Evidence                                                                                                                                                                     |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **The vocabulary does not fit.** The prompt is 58,260 tokens. At the 16,384-token window the large vLLM models use by default, only ~1,100 of the 4,711 terms reach the model. At 8k, whole facets are dropped | `llm_config.txt` (the `MAX_MODEL_LEN` notes); `data_samples/vocab/context_budget.csv`                                                                                        |
+| **Forced labels.** Constrained decoding finishes whatever label shares the model's prefix                                                                                                                      | `Artemísion`, `zvonice`, `prahory`, `Pentelikon`, `jámová kultura` (10-16). Options 1 + 2 cleared Qwen3.8; `zvonice` and `prahory` remain in Qwen3.6 and `qwen3-14b` (10-19) |
+| **The confidence cannot rank or filter.** 91 % of content lines get 0.95 or 0.85; the rubric block helps, but the score is not calibrated                                                                      | 10-16, 10-19                                                                                                                                                                 |
+
+**What a decision model changes.** It reads a state (the line and its context) and typed questions in one prefill
+pass, and returns a probability for each allowed option. It generates no text.
+
+| Property                                                           | What it means for #2                                                                                                                                                                          |
+|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| A `choice` can only return one of its options                      | No prefix trap, no label outside the list. **D2 holds by construction:** the answer is a validated term, or `none_of_these`, which is "unresolved"                                            |
+| One probability per option                                         | The confidence #2 lacks, once thresholds are set on gold                                                                                                                                      |
+| At most 255 options per `choice`, at most 64 questions per request | The 4,711 terms are reached by **descending the vocabulary's levels**. No request carries more than one node's children, so the whole vocabulary is reachable at any window, even Strands' 4k |
+
+**The candidates** are those of #58, all served at `POST /v1/systemone`:
+- **Clef** (27B). It is built on **Qwen3.8-27B, the backbone of #2's research default**. Clef against
+  `qwen-3.8-27b-it` therefore compares a decision head with constrained generation on the same model.
+- **Clef-Flash** (9B).
+- **Strands Decider 2B.** Text-native; it runs on a CPU.
+
+**What a decision model cannot do:** extract keywords. `extracted_keywords_cs/en` are spans of the line, which is
+generation. This plan covers the category and the meta-text decision only. The keywords stay with the generative or
+the statistical kind.
+
+**The rulings that bind it** ([`2.plan.md`](2.plan.md), "Governing rulings"):
+- **P1:** apply AMČR and TEATER, never reorganise them. The descent uses their facets, groups and terms as they are.
+  Any extra grouping is plumbing and is never emitted.
+- **P2:** facets are prompt plumbing. Here, facets and groups are routing levels and never a final category.
+- **D1:** the rubric of 10-08. It scores the results.
+- **D2:** a final keyword is a validated term or unresolved; approaches are compared on the annotated gold set before
+  any decision.
+
+## The tree (measured 11-05)
+
+Built from `prompt_template.vocabulary_terms()` over `data_samples/vocab/union_nested.json`:
+- 4,711 terms, plus the meta-text sentinel `Nerelevantní (meta-text)`, which is always first.
+- Each term carries `theme` (facet), `sub` (group), `cs`, `en`, `ids`, and `bare_cs` where B3 qualified it.
+
+| Facet                         | Terms | Groups | Largest group                                              |
+|-------------------------------|------:|-------:|------------------------------------------------------------|
+| Chronology                    |   272 |      4 | 144                                                        |
+| Activity Area                 |   266 |     21 | 69                                                         |
+| Feature                       |   374 |     21 | 147                                                        |
+| Artefact                      |   728 |     25 | 206                                                        |
+| Material                      |   160 |      4 | 85                                                         |
+| Finds Context                 |    11 |      1 | 11                                                         |
+| Methods                       |   293 |     19 | 66                                                         |
+| Location & Admin              |    71 |      6 | 31                                                         |
+| Cultural & Geographic Context |   965 |      4 | 389 (`etnika`), 311 (`historické oblasti a státní útvary`) |
+| Related Disciplines & Society | 1,571 |     18 | 886 (`příbuzné obory`)                                     |
+
+`Other` is empty.
+
+**The groups are not flat.**
+- Inside a group, each term's parent is its **nearest ancestor that the union offers in the same facet**:
+  - from the TEATER `broader` chain (the full chain, root first; the direct parent is its last element);
+  - or from the AMČR link to a `*_kat` list;
+  - else the group itself.
+- That map is already computed: `data_samples/vocab/specificity_pairs.csv` (3,226 rows: `nearest_ancestor_id`,
+  `rungs_above`), from `vocab_review.specificity_pair_rows()`.
+- Rebuilt with it, the descent below the groups has:
+  - **797 inner nodes that are themselves terms** (`nádoba`, `budova`, …);
+  - **up to 11 levels.**
+- **Only one node has more than 255 children:** `historické oblasti a státní útvary` (TEATER 2900, ~260).
+- Four more have over 64, which matters only for packing questions: `země` 250, `etnika` 71,
+  `specifikace objektu` 68, `nádoba` 65.
+- The same tree carries D1-a's decay by rungs, so the descent and the rubric agree on what "broader" means.
+
+## Phase 0: the client and the server
+
+- **Client:** copy `decision_client.py` from page-classification once it exists there (its #58 Phase 0).
+  - This repository becomes its third consumer, beside ocr-postprocess and digital-convert.
+  - Pin it in `tests/test_vendored_decision_parity.py` (`VENDORED` SHA-256 + `ADOPTED`), as
+    `api_util/teitok_read.py` is pinned from nlp-enrich, and add page-classification to the caller's
+    `vendored-from`.
+  - It needs `requests`, which `requirements_remote.txt` already has. No torch.
+- **Server:** the cluster server of #58 Phase 0 (SGLang for Clef and Clef-Flash; `strands-decider serve` for Strands).
+  Settings are CLI flags while the work is offline.
+
+## Phase A: the descent (`dm_run.py`, torch-free)
+
+`dm_run.py` reuses the light path's input handling, so it reads the same lines as the LLM runs:
+- `llm_client_shared.read_input_rows()` (CSV, `*.teitok.xml`, a `*.document.json` record);
+- `should_process_line()`, the quality filter with the `llm_config.txt` values;
+- `get_context_window(rows, idx, 2)`;
+- `excluded_prompt_themes()`, and `prompt_template.resolve_geo_guardrail()` (configured: `preference`).
+
+**Line mode.** One request per level per line. The state (the line marked in its context, as JSON) is prefilled once
+per request, and the request's questions are the beam's open nodes:
+
+| Level | Question                                                                                                                                                                                                                            | From                                                                                                                                                                                                                                                                                   |
+|-------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| L0    | `noul`: "Is the marked line archaeological content?"                                                                                                                                                                                | `[[rule.metatext]]`. A no gives the sentinel `Nerelevantní (meta-text)`, as the LLM path does                                                                                                                                                                                          |
+| L1    | `choice`: the facets, each described by its group titles, + `none_of_these`                                                                                                                                                         | P2. The facet set is the prompt's, after `excluded_prompt_themes()`                                                                                                                                                                                                                    |
+| L1g   | `noul`: "Is the line genuinely about a place, a people or a dynasty?"                                                                                                                                                               | `[[guardrail.geographic.preference]]`. It gates the branches the guardrail covers (`taxonomy_config.json` `_settings.geo_guardrail.covers`: `heslar:zeme`, TEATER 2560 `etnika`, 2900 `historické oblasti a státní útvary`, 3076 the dynasties). Under `strict` they are never offered |
+| L2    | `choice`: the facet's groups + `none_of_these`                                                                                                                                                                                      | Skipped when the facet has one group (Finds Context)                                                                                                                                                                                                                                   |
+| L3…   | `choice`: the node's children (`cs` as the option, `en` in its description), plus **`<this term>`** when the node is itself a term, plus `none_of_these`. Repeated down the tree until the beam stops at a term                     | The tree of `specificity_pairs.csv`. `<this term>` is "nothing narrower fits"                                                                                                                                                                                                          |
+| L3t   | A node with more than 255 children (today only `historické oblasti a státní útvary`): ordered chunks of ≤ 255 (Czech alphabetical order; TEATER gives no `sort`), each + `none_of_these`; then one `choice` among the chunk winners | Plumbing, never emitted (P1)                                                                                                                                                                                                                                                           |
+
+- **Beam:** keep up to k = 3 children with p ≥ 0.2 at each level. A path's probability is the product of its levels'
+  probabilities, and the answer is the best path that ends in a term.
+  - Most paths end within a few levels, but TEATER branches go up to 11 below a group. The request count per line is
+    therefore measured, not assumed.
+  - Each request carries at most a few hundred options, far below any window.
+- **Unresolved (D2):** every path ends in `none_of_these`, or the best path is below the review threshold. The line is
+  then written as unresolved, with the deepest confident node kept as a hint, never as the category. Facets and groups
+  are never a category (P2).
+- **Most specific:** both halves of `[[rule.most_specific]]` have a counterpart.
+  - "The most specific entry the line supports": the descent goes down while a child is likely.
+  - "Else the closest broader entry": `<this term>` stops it at an inner node that is a term.
+  - Only when no term fits at any level is the line unresolved.
+- **Lanes:** `accept`, `escalate` (Strands, then Clef) or `review`. The thresholds wait for gold (Phase D).
+- **The state is untrusted input:** OCR text can contain anything. An answer never changes the vocabulary or the
+  record by itself.
+
+**Document mode** (second, after line mode is scored). Multi-label, producing the document's term list for
+`enrichment`:
+- a `noul` per facet ("Does the document discuss …?");
+- for the accepted facets, a `noul` per group;
+- within the accepted groups, the line-mode descent with a `noul` per child in place of one `choice`, because a
+  document can support several terms. At most 64 questions per request; the four nodes with more than 64 children
+  take several requests.
+
+**Output.** `data_samples/KW_PER_DOC_DM_<model>/<doc>_enriched.json`, one item per line, in the shape the LLM runs
+write:
+- `teater_category` (the term, the sentinel, or null when unresolved);
+- `confidence_score` (the path probability);
+- `teater_category_ids` (`category_maps()` / `attach_category_ids()`, so composite halves and B3 qualifiers resolve
+  as in the LLM path);
+- `extracted_keywords_cs/en` empty;
+- a `decision` object: the path, each level's probabilities, `unresolved`, `lane`, `status`, the request count,
+  `latency_ms`, the tree digest.
+
+The run's paradata is written beside it, as for R3.
+
+## Phase B: question sets and digests
+
+- **The tree** is generated, never hand-written. `dm_run.py --dump-tree` writes the levels, the chunking and every
+  `choice`'s options from `vocabulary_terms()` and the parent map of `specificity_pairs.csv`.
+  - Both are generated files, rebuilt by the vocabulary build. A vocabulary change therefore changes the tree's
+    digest, and that shows in every run's paradata.
+- **Its digest** (SHA-256 of the canonical JSON) and the vocabulary asset version go into the run's paradata
+  `config`. They sit beside the model id, the revision, the beam (k, p_min), the guardrail mode and the context
+  window.
+- **The question wording** is drawn from the prompt blocks above, so the two kinds ask the same things. The wording is
+  frozen before any scored run.
+- **`para_config.txt`** gets one row per decision model (Apache-2.0, `conditional`), logged with `log_component()`.
+  The generative model's licence lookup remains #2's open item.
+
+## Phase C: runs without gold (possible now)
+
+**Inputs:** the 19 documents, from the same inputs as K1 on the cluster: 1,029 lines kept by the quality filter;
+2,172 rows in `gold_workbook.csv`.
+
+**Runs:**
+- **Models:** Clef, then Clef-Flash, then Strands.
+- **Ablations:**
+  - beam 1 against beam 3;
+  - context 0 against 2 lines;
+  - **guided descent:** where a line's `candidate_terms` or the statistical kind's keywords name vocabulary terms,
+    their branches go first in the beam.
+    - This ranks branches; it does not restrict them. Only 384 of the 2,172 workbook lines have a candidate term.
+    - A hard restriction is tested once, to measure what it misses.
+
+**Scored with `score_categories.py`** beside `KW_PER_DOC_LLM_R3_qwen_38_27b_it` and the other R3 runs:
+- coverage (counted from the input);
+- forced capital labels and the 10-16 watch list (expected 0 by construction);
+- no-shared-word (coarse; it is not an error count);
+- the confidence spread;
+- the agreement with each R3 run on the lines both call content.
+
+`score_categories.py` is adapted only as far as it needs: a null category counts as unresolved, not missing, and
+unknown fields are ignored. Tests cover both.
+
+**New in the report:**
+- the unresolved share, and the level where the descent stopped;
+- meta-text agreement with R3 (R3 `qwen-3.8-27b-it`: 496 of 1,029 lines meta-text);
+- requests, latency and input tokens per line, against R3's figures:
+  - `qwen-3.8-27b-it` on transformers: 9,657 s for the run;
+  - the vLLM R3 runs: 490–985 s;
+  - a 58,432-token cached prefix per line.
+
+**What this shows without gold:** whether the descent is cleaner (no forced labels), how often it abstains, and how
+often it agrees with the shortlisted generative runs. It does not show accuracy.
+
+## Phase D: with gold (after the pilot; #2 steps 4–6)
+
+When `gold_workbook.csv` has `gold_category` labels (hub #16 and the annotators; 0 of 2,172 today):
+- split by document into dev and test; set the lanes and thresholds on dev;
+- score under D1 on test with the S6 scorer: strict and decay accuracy, per facet, meta-text and the D1-e/f cells;
+- calibration (Brier, ECE), and coverage against error for the `review` lane.
+
+**The comparison motyc asked for (D2):** the constrained prompt, Option 3 and decision models, on the same lines,
+with unresolved counted as a separate cell, neither right nor wrong.
+
+## Phase E: decide
+
+- **Stop:** no gain over the constrained prompt on gold, or the unresolved share is too high to be useful.
+- **Keep as a research option:** e.g. as the `review`/`escalate` gate in front of the generative kind, or for one
+  facet.
+- **Propose a follow-up:** a controlled-kind method setting (`decision` beside the LLM) in the service.
+  - The seam is `service/api.py:_run_controlled`, which today is `enrich_rows` plus `attach_category_ids`.
+  - `enrichment.items` already allows extra properties, so the `decision` object fits the record.
+  - It is its own reviewed change, with:
+    - `tool_limits.py` limits and `.env.example`;
+    - `service/openapi.json`;
+    - the `enrichment` method label;
+    - a `controlled-live.yml` lane against a decision server.
+
+## Done criteria
+
+- [ ] The client is vendored and pinned; the tree is generated, with its digest.
+- [ ] Line-mode runs of Clef, Clef-Flash and Strands on the 19 documents, with paradata, scored by
+      `score_categories.py` beside R3.
+- [ ] The ablations (beam, context, guided descent) are recorded.
+- [ ] Forced labels are 0 or explained; the unresolved share and the cost per line are reported.
+- [ ] When gold exists: the D1 scores and calibration, and the comparison under D2, are posted on #2.
+- [ ] Nothing in the service, the prompt, the defaults or the record changed.
+
+## Out of scope
+
+- Keyword (span) extraction by a decision model.
+- Reorganising AMČR or TEATER, or emitting a facet or group as a category.
+- Changing the shipped controlled kind, its prompt or `MODEL_KEY` during the pilot.
+- Hosted inference on archive text without a data-governance check.
+
+## Refresh conditions
+
+Refresh after any of these:
+- the client lands in page-classification;
+- the first scored run;
+- gold labels;
+- a change of candidates in #58;
+- a ruling on #2 that touches D2.

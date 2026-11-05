@@ -1,5 +1,5 @@
 # 📓 atrium-keyword-extract — agent_dev_logs/DEVLOG.md (timeline index)
-> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 1 open issue: #2 (research, deferred past the pilot, atrium-project#67); #1 closed 2026-10-12 (its pair removed 2026-10-21). **Pilot release: v1.6.4-beta** (`0d5a2f3`, 2026-11-04; immutable, with `images.json`; atrium-project#77); v1.6.3-beta and the mistyped `v1.6.3.-beta` were tagged, not released. Hub workflows pinned to `51aad6c` (`v1`). Latest entry: 2026-11-04 (afternoon)._
+> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 1 open issue: #2 (research, deferred past the pilot, atrium-project#67); #1 closed 2026-10-12 (its pair removed 2026-10-21). **Pilot release: v1.6.4-beta** (`0d5a2f3`, 2026-11-04; immutable, with `images.json`; atrium-project#77); v1.6.3-beta and the mistyped `v1.6.3.-beta` were tagged, not released. Hub workflows pinned to `51aad6c` (`v1`). Latest entry: 2026-11-05._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Entries before 2026-10-01 are atrium-nlp-enrich's, where #2 was #6. Cross-repo history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md`._
 
 ## 2026-04-17
@@ -1070,3 +1070,23 @@ Documentation only; no code, test or configuration change.
 * **Released:** v1.6.4-beta (11:20Z, release run 41817846546), the pilot release (atrium-project#77). v1.6.3-beta and the mistyped `v1.6.3.-beta` stay tags without a release; the `.3` CONTRIBUTING row now says so.
 * **#6 wording:** the licence rationale in `para_config.txt` calls the most-restrictive value the run's calculated licence label, not the output's licence (the file still parses; version v1.6.4-beta).
 * **Records:** the header names the pilot release.
+
+## 2026-11-05 — #2: decision models over the vocabulary, a plan (page-classification#58)
+
+* **New:** `plans/decision_models.plan.md`. This repository's part of the decision-model plan anchored on
+  page-classification#58.
+* **The method:** Clef, Clef-Flash and Strands Decider 2B (`POST /v1/systemone`) answer `choice`/`noul` questions
+  with a probability per option, and generate no text. The descent goes meta-text, then facet, then group, then term,
+  with `none_of_these` at every step.
+* **Why:** D2 holds by construction (a listed term or unresolved). There is no prefix trap. The whole vocabulary is
+  reachable at any window: the 58,260-token prompt reaches only ~1,100 of the 4,711 terms at 16k.
+* **Measured** from `union_nested.json` and `specificity_pairs.csv`: 10 facets, 1–25 groups each. Below the groups,
+  the terms' own tree has 797 inner nodes that are terms, and up to 11 levels. Only `historické oblasti a státní
+  útvary` (~260 children) exceeds a `choice`'s 255 options; it is chunked.
+* **Clef's backbone is Qwen3.8-27B,** the default model's.
+* **Runs without gold:** on the 19 documents, scored by `score_categories.py` beside R3. With gold, the method joins
+  the D2 comparison.
+* **No change** to the service, the prompt or the defaults.
+* **#2's plan and digest:** "Option 4" added.
+* **Prepared:** a #2 comment, delivered in chat.
+* Not pushed: files delivered in chat.
