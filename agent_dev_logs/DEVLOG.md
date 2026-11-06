@@ -1,5 +1,5 @@
 # 📓 atrium-keyword-extract — agent_dev_logs/DEVLOG.md (timeline index)
-> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 1 open issue: #2 (research, deferred past the pilot, atrium-project#67); #1 closed 2026-10-12 (its pair removed 2026-10-21). **Pilot release: v1.6.4-beta** (`0d5a2f3`, 2026-11-04; immutable, with `images.json`; atrium-project#77); v1.6.3-beta and the mistyped `v1.6.3.-beta` were tagged, not released. Hub workflows pinned to `51aad6c` (`v1`). Latest entry: 2026-11-06._
+> _Keyword extraction: statistical keywords (KeyBERT/YAKE) and controlled keywords from the AMČR/TEATER vocabulary through an LLM, with the CC0 vocabulary as a release asset. Split from atrium-nlp-enrich and atrium-llm-enrich on 2026-10-01. 2 open issues: #2 (research, deferred past the pilot, atrium-project#67) and #3 (decision models over the vocabulary, #2's Option 4, opened 2026-11-06; a sub-issue of atrium-project#83); #1 closed 2026-10-12 (its pair removed 2026-10-21). **Pilot release: v1.6.4-beta** (`0d5a2f3`, 2026-11-04; immutable, with `images.json`; atrium-project#77); v1.6.3-beta and the mistyped `v1.6.3.-beta` were tagged, not released. Hub workflows pinned to `51aad6c` (`v1`). Latest entry: 2026-11-06 (evening)._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Entries before 2026-10-01 are atrium-nlp-enrich's, where #2 was #6. Cross-repo history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md`._
 
 ## 2026-04-17
@@ -1103,3 +1103,22 @@ Documentation only; no code, test or configuration change.
   examples in the docs; the vocabulary sidecars restamped (`python vocab_build.py --from-flat --skos`, which
   `tests/test_vocab_release_stamp.py` requires); the `CONTRIBUTING.md` row; a paragraph on the entry point in `docs/usage.md`.
 * **Yours:** push the hub commit with `container_entrypoint.py` and move `v1`; here, `python3 ../atrium-project/scripts/pin_hub_reusables.py --sha <v1>` committed with these files (para-drift checks the copy only at a pin that has it); push `test`; then `python3 ../atrium-project/scripts/tag_release.py v1.6.5-beta`, which tags the pushed HEAD only and pushes that one tag.
+
+## 2026-11-06 (evening) — #3: the descent tree over the vocabulary, built (atrium-project#83)
+
+* **Read:** the push of 16:51 (`24f9e6b`: `3.plan.md`, `3.digest.md`); #3, opened 16:40 under atrium-project#83.
+* **Written (not pushed):** `dm_run.py --dump-tree OUT`, with `tests/test_dm_tree.py` (10).
+  * **The tree** comes from `vocabulary_terms()`, `specificity_pairs.csv` (TEATER parents) and `amcr_flat.json`
+    `broader` (AMČR parents), with the guardrail's `covers` and the prompt blocks' wording.
+  * **Its shape:** 4,711 terms, 122 groups, 750 inner term nodes, parent chains ≤ 11, one chunked node, 885 choices of
+    ≤ 251 options; digest `3ef6fced…`.
+  * **11-05's 797 inner nodes do not reproduce.** The plan says why.
+  * Line mode waits for the vendored client.
+* **Checked:**
+  * the new tests with `test_env_contract.py`: 22 passed;
+  * ruff;
+  * the hub's image closure, unchanged.
+* **Records:** the #3 export; `plans/3.plan.md` and `digests/3.digest.md`; `plans/2.plan.md` and `digests/2.digest.md`
+  point at `3.plan.md` and #3.
+* **Yours:** push; the fixed #3 body and the comment for @david-spacil, delivered in chat.
+* Not pushed: files delivered as per-repo zips.
