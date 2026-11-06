@@ -201,6 +201,12 @@ The Dockerfile builds three images, one per target:
 | `base` | `ghcr.io/ufal/atrium-keyword-extract`     | the batch CLI (`keywords.py`)                                       |
 | `llm`  | `ghcr.io/ufal/atrium-keyword-extract-llm` | the research LLM batch run, GPU                                     |
 
+The batch image passes its arguments to `keywords.py` (`docker run IMAGE -i /data/UDP -m yake`). Since `v1.6.5-beta`
+its entry point is the hub-canonical `container_entrypoint.py`, which names `keywords.py` by its absolute path: a
+first argument that names a shell or Python runs that program instead (`docker run IMAGE /bin/sh job.sh`), which is
+how Galaxy starts a tool's container. Only those interpreters run, so an input folder that happens to be called `sh`
+is still a folder; the `llm` image does the same for `llm_run.py`.
+
 ```bash
 docker compose --profile api up                       # the service on :8000
 docker compose run --rm kw -i /data/UDP -m yake       # the batch CLI

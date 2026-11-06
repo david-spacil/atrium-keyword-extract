@@ -29,7 +29,7 @@ The published image first: it is what a deployment runs, and it needs no checkou
 
 ```bash
 docker run --rm -p 8000:8000 -v hf-cache:/cache/huggingface \
-  ghcr.io/ufal/atrium-keyword-extract-api:<version>      # e.g. 1.6.4-beta
+  ghcr.io/ufal/atrium-keyword-extract-api:<version>      # e.g. 1.6.5-beta
 curl -s http://localhost:8000/ready                      # 200 once the KeyBERT model is loaded
 # from a checkout:
 docker compose --profile api up

@@ -83,7 +83,12 @@ USER atrium
 # The batch form of the stage: the statistical keywords of CoNLL-U files (nlp-enrich's UDP/ output) or
 # TEITOK, `python keywords.py -i <dir> -m keybert|yake|legacy`. Published as :<version>, never pinned;
 # the production image is `api` below.
-ENTRYPOINT ["python", "keywords.py"]
+# container_entrypoint.py (hub-canonical, vendored; atrium-project#66) runs /app/keywords.py by its absolute path with
+# the arguments `docker run` passes, as before. A first argument that names a shell or Python
+# (`/bin/sh tool_script.sh`) runs as given: that is how Galaxy starts a tool's container, in the
+# job's own working directory, where the old relative `python keywords.py` failed. It ends in os.execv,
+# so the program is PID 1.
+ENTRYPOINT ["python", "/app/container_entrypoint.py", "/app/keywords.py"]
 CMD []
 
 
@@ -160,5 +165,6 @@ RUN chown -R atrium:0 /app /home/atrium \
     && chmod -R g=u /app /home/atrium
 USER atrium
 
-ENTRYPOINT ["python", "llm_run.py"]
+# The same entry point as `base`, given this stage's program; the default config stays relative to /app.
+ENTRYPOINT ["python", "/app/container_entrypoint.py", "/app/llm_run.py"]
 CMD ["llm_config.txt"]

@@ -4,7 +4,7 @@
 
 [tool]
 program = keyword-extract
-version = v1.6.4-beta
+version = v1.6.5-beta
 repository_fallback = https://github.com/ufal/atrium-keyword-extract
 
 [components]
