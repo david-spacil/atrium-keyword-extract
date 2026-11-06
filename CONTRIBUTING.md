@@ -28,8 +28,8 @@ repository, its history and the maintainers' working records are in `docs/develo
 
 **Tagging.** Tag a release only once its version bump is pushed, with the hub's helper, which refuses a tag the
 release gate would fail and pushes that one tag alone: `python3 ../atrium-project/scripts/tag_release.py
-vX.Y.Z-beta` (hub `docs/release_trust.md`, Tagging a release). If a tag push starts no Release Bundle run, run that
-workflow on the tag (*Actions → Release Bundle → Run workflow*, the tag as the ref): on a tag, that run is the
+vX.Y.Z-beta` (hub `docs/release_trust.md`, Tagging a release). If a tag push starts no run of `release.yml`, run that
+workflow on the tag (*Actions → Release → Run workflow*, the tag as the ref): on a tag, that run is the
 release.
 
 ---

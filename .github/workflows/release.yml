@@ -11,13 +11,14 @@
 # compares it with the previous release: a breaking change fails the release unless the
 # major version went up (for a 0.x version, 1.0).
 #
-# `workflow_dispatch` is the dry run (atrium-project#40: an immutable release uses up its
+# `workflow_dispatch` on a branch is the dry run (atrium-project#40: an immutable release uses up its
 # tag, so the gate is proven BEFORE tagging): every check runs against the dispatched ref
 # and the latest release, and nothing is published.
+# On a tag ref the dispatch is the release itself, the recovery when a tag push started no run
+# (hub docs/release_trust.md, Tagging a release).
 #
-# Suggested tagging workflow:
-#   git tag -a v1.0.0 -m "v1.0.0 — the first release of keyword-extract"
-#   git push origin v1.0.0
+# Tagging, from this checkout once the release commit is pushed (hub docs/release_trust.md):
+#   python3 ../atrium-project/scripts/tag_release.py vX.Y.Z-beta   # --dry-run to only check
 #
 # The release certifies its images (atrium-project#81, decided 2026-10-22): the `image` job builds,
 # probes, scans and promotes them through the hub's docker-tool.reusable.yml with
@@ -44,7 +45,7 @@ on:
   push:
     tags:
       - 'v*'
-  # The dry run (see the header): no release is created.
+  # On a branch, the dry run (see the header): no release is created. On a tag, the release.
   workflow_dispatch:
     inputs:
       simulate-probe-failure:
