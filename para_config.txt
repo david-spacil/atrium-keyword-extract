@@ -43,3 +43,7 @@ sentence_transformers = Apache-2.0 ; conditional ; sentence-transformers backbon
 keybert_model         = Apache-2.0 ; conditional ; paraphrase-multilingual-MiniLM-L12-v2 embedding model weights (Hugging Face Hub)
 amcr_vocab            = CC0        ; conditional ; AMCR heslar controlled vocabulary (vocab_sources.harvest_amcr)
 teater_data           = CC0        ; conditional ; TEATER thesaurus data (vocab_sources.harvest_teater)
+# (#3, atrium-project#83) The decision models of the offline dm_run.py, served at POST /v1/systemone and
+# called through decision_client.py (vendored from page-classification): Clef, Clef-Flash (Cloudflare)
+# and Strands Decider 2B, all Apache-2.0. The service and the batch CLIs never load them.
+decision_model        = Apache-2.0 ; conditional ; decision models (Clef, Clef-Flash, Strands Decider 2B) for the #3 experiments

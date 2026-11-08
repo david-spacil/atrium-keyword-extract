@@ -1122,3 +1122,29 @@ Documentation only; no code, test or configuration change.
   point at `3.plan.md` and #3.
 * **Yours:** push; the fixed #3 body and the comment for @david-spacil, delivered in chat.
 * Not pushed: files delivered as per-repo zips.
+
+## 2026-11-08 — #3: the document type, from the list shared with digital-convert (atrium-project#83)
+
+* **Asked (K4TEL, in session):** like digital-convert, determine the document's type from the archive system's list,
+  under question for AMČR. The answer: prepare the shared list now.
+* **Written (not pushed):**
+  * **The client:** `decision_client.py`, vendored from page-classification (`39a7bea`, `v1.13.0-beta`).
+  * **The list:** `decisions/document_type.v1.json`, vendored from digital-convert (its v1 of the same day).
+    * Both are pinned in `tests/test_vendored_decision_parity.py`.
+    * The list's `ADOPTED` commit and release are `None` until digital-convert's commit exists.
+  * **Settings:** `ruff.toml` (B905 for the copy, no formatting), `DECISION_*` under `NOT_PUBLISHED`,
+    `decision_model` in `para_config.txt`.
+  * **`dm_run.py --doc-type`:** one request per document from its `Clear`/`Noisy` lines up to `--max-chars`. It writes
+    `DM_DOC_TYPE.csv` and a summary; `--gold` scores it.
+  * **Tests:** `tests/test_dm_doc_type.py` (9).
+* **Checked:**
+  * the full suite: 1,073 passed, 8 skipped;
+  * ruff;
+  * `--doc-type` on `data_samples/DOC_LINE_CATEG/` against the fake server.
+* **Records:** `plans/3.plan.md` (Phase A′), `digests/3.digest.md`.
+* **Yours:**
+  * unpack and push;
+  * once digital-convert's commit with the list exists, fill the list's `ADOPTED` commit;
+  * the comment for #3, delivered in chat.
+* Not pushed: files delivered as per-repo archives.
+
