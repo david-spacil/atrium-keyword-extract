@@ -12,16 +12,19 @@ into every run's paradata, so a vocabulary change shows in the runs. Line mode (
 requests) is not written yet.
 
 **The document type** (``--doc-type``). Each document of a ``DOC_LINE_CATEG`` folder gets an AMČR
-``dokument_typ``, chosen by a decision model from its text alone: the document's ``Clear`` and
-``Noisy`` lines, in order, whole lines up to ``--max-chars``. The two questions (6 groups, 32 types
-with ``neurčený dokument`` as the abstain option) and their digest come from
-``decisions/document_type.v1.json``, the list atrium-digital-convert builds from this repository's
-``amcr_flat.json`` and asks about PDF pages (its #8); the copy is pinned in
-``tests/test_vendored_decision_parity.py``, as is the client, ``decision_client.py``, from
-atrium-page-classification. ``dokument_typ`` is withheld from the keyword vocabulary
-(``taxonomy_config.json``), so a type is never a keyword: it is a document-level answer of its own.
-The table, ``DM_DOC_TYPE.csv``, and a ``.summary.json`` sit beside each other; with ``--gold``
-(``file,document_type``) the summary scores the types and the groups. Nothing reaches the record.
+``dokument_typ``, chosen by a decision model from its text alone, never an image: the document's
+``Clear`` and ``Noisy`` lines, in order, whole lines up to ``--max-chars``. The list is the one
+atrium-digital-convert builds from this repository's ``amcr_flat.json`` and asks about PDF page
+images (its #8), vendored as ``decisions/document_type.v1.json`` and pinned in
+``tests/test_vendored_doctype_parity.py``; the client, ``decision_client.py``, is pinned from
+atrium-page-classification in ``tests/test_vendored_decision_parity.py``. This tool asks the list's
+**text-only view** (``document_text``): one ``document_type`` choice over the 6 written-document
+types and ``neurčený dokument`` (the abstain option), with no ``group`` question. Photographs,
+aerial photographs, plans, maps and drawings cannot be told from OCR text, so they are not offered.
+``dokument_typ`` is withheld from the keyword vocabulary (``taxonomy_config.json``), so a type is
+never a keyword: it is a document-level answer of its own. The table, ``DM_DOC_TYPE.csv``, and a
+``.summary.json`` sit beside each other; with ``--gold`` (``file,document_type``) the summary scores
+the types, also over the documents whose catalogue type the view offers. Nothing reaches the record.
 
 How the tree is made, from files the vocabulary build already writes:
 
@@ -530,25 +533,81 @@ def tree_stats(
 # ── document type (#3; the list is shared with digital-convert#8) ────────────────────────────
 
 DOC_TYPE_LIST = REPO_ROOT / "decisions" / "document_type.v1.json"
-DOC_TYPE_STATE = "document_text"  # the list's state for an item read as OCR text
+TEXT_VIEW = "document_text"  # the list's view for an item read as OCR text, never an image
+TEXT_GROUPS = ("text",)  # the types OCR text can tell: the written documents
+TEXT_INPUTS = {
+    "image": "none",
+    "text": "the document's OCR text (its first lines, in order), always",
+}
 TEXT_CATEGORIES = ("Clear", "Noisy")  # the lines whose text goes to the model, in document order
 SERVED_ON = ("cluster-job", "ufal-endpoint", "local", "other")
 
 
 def load_doc_types(path: Path = DOC_TYPE_LIST) -> Dict[str, Any]:
-    """The vendored list, with its questions checked and their digest recomputed."""
+    """The text-only view of the vendored list, its questions checked and their digest recomputed.
+
+    Photographs, aerial photographs, plans, maps and drawings cannot be told from OCR text, so the
+    view offers the written-document types (group ``text``) and the abstain option, and no ``group``
+    question. From a v2 list it is the list's own ``document_text`` view; from v1 it is derived the
+    same way digital-convert's ``tools/build_document_types.py`` derives it (the same criteria text),
+    so the digest is the same either way."""
     import decision_client as dc  # noqa: PLC0415 — vendored from atrium-page-classification
 
     content = json.loads(path.read_text(encoding="utf-8"))
-    questions = dc.questions(content["questions"])
-    if dc.schema_digest(questions) != content["schema_digest"]:
-        raise SystemExit(f"{path}: the questions do not match their digest; re-vendor the list")
-    if DOC_TYPE_STATE not in content.get("states", {}):
+    abstain = content["abstain"]
+    offered = [t["id"] for t in content["types"] if t["group"] in TEXT_GROUPS or t["id"] == abstain]
+    if "views" in content:
+        if TEXT_VIEW not in content["views"]:
+            raise SystemExit(
+                f"{path}: no {TEXT_VIEW!r} view; this list is not shared with keyword-extract"
+            )
+        entry = content["views"][TEXT_VIEW]
+        questions, item, inputs = entry["questions"], entry["item"], entry["inputs"]
+        declared = entry["schema_digest"]
+    else:
+        if TEXT_VIEW not in content.get("states", {}):
+            raise SystemExit(
+                f"{path}: no {TEXT_VIEW!r} state; this list is not shared with keyword-extract"
+            )
+        page = content["questions"]["document_type"]
+        questions = {
+            "document_type": {
+                "type": "choice",
+                "instructions": page["instructions"],
+                "criteria": {tid: page["criteria"][tid] for tid in offered},
+            }
+        }
+        item, inputs = content["states"][TEXT_VIEW]["item"], TEXT_INPUTS
+        declared = None
+    questions = dc.questions(questions)
+    digest = dc.schema_digest(questions)
+    if declared is not None and declared != digest:
         raise SystemExit(
-            f"{path}: no {DOC_TYPE_STATE!r} state; this list is not shared with keyword-extract"
+            f"{path}: the {TEXT_VIEW} questions do not match their digest; re-vendor the list"
         )
-    content["questions"] = questions
-    return content
+    if (
+        list(questions) != ["document_type"]
+        or list(questions["document_type"]["criteria"]) != offered
+    ):
+        raise SystemExit(
+            f"{path}: the {TEXT_VIEW} view does not offer the written-document types only"
+        )
+    if inputs.get("image") != "none":
+        raise SystemExit(
+            f"{path}: the {TEXT_VIEW} view takes an image; keyword-extract reads text only"
+        )
+    by_id = {t["id"]: t for t in content["types"]}
+    return {
+        "version": content["version"],
+        "view": TEXT_VIEW,
+        "questions": questions,
+        "item": item,
+        "inputs": inputs,
+        "schema_digest": digest,
+        "types": [by_id[tid] for tid in offered],
+        "all_types": content["types"],
+        "abstain": abstain,
+    }
 
 
 def document_text(
@@ -573,9 +632,9 @@ def document_text(
 
 def _gold_types(path: Path, doc_types: Mapping[str, Any]) -> Dict[str, str]:
     """``file -> type id`` from a CSV with ``file`` and ``document_type`` (an id, a HES number or a
-    Czech label of the list)."""
+    Czech label of the whole list: a catalogue type the text view does not offer still counts)."""
     by_any: Dict[str, str] = {}
-    for t in doc_types["types"]:
+    for t in doc_types["all_types"]:
         for key in (t["id"], t["hes"], t["cs"]):
             by_any[str(key).casefold()] = t["id"]
     out: Dict[str, str] = {}
@@ -590,12 +649,11 @@ def _gold_types(path: Path, doc_types: Mapping[str, Any]) -> Dict[str, str]:
 
 
 def doc_type_columns(doc_types: Mapping[str, Any]) -> List[str]:
-    groups = [f"P_group_{g}" for g in doc_types["groups"]]
     types = [f"P_type_{t['id']}" for t in doc_types["types"]]
     return (
-        ["file", "lines_used", "lines_available", "chars", "group"]
-        + groups
-        + ["document_type", "type_group", "confidence", "top3", "lane", "gold_type", "gold_group"]
+        ["file", "lines_used", "lines_available", "chars"]
+        + ["document_type", "type_group", "confidence", "top3", "lane"]
+        + ["gold_type", "gold_group", "gold_offered"]
         + types
         + ["status", "error", "latency_ms", "input_tokens", "attempts", "schema_digest"]
     )
@@ -610,32 +668,34 @@ def decide_doc_type(
     accept_at: Optional[float] = None,
     review_below: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """One row of ``DM_DOC_TYPE.csv`` for one ``DOC_LINE_CATEG`` CSV. Never raises for a server problem."""
+    """One row of ``DM_DOC_TYPE.csv`` for one ``DOC_LINE_CATEG`` CSV. Never raises for a server problem.
+
+    The request carries the document's text and no image."""
     import decision_client as dc  # noqa: PLC0415
 
     with path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     text, used, available = document_text(rows, max_chars)
-    group_of = {t["id"]: t["group"] for t in doc_types["types"]}
+    group_of = {t["id"]: t["group"] for t in doc_types["all_types"]}
+    offered = {t["id"] for t in doc_types["types"]}
+    gold_type = (gold or {}).get(path.stem, "")
     row: Dict[str, Any] = {
         "file": path.stem,
         "lines_used": used,
         "lines_available": available,
         "chars": len(text),
-        "gold_type": (gold or {}).get(path.stem, ""),
+        "gold_type": gold_type,
+        "gold_group": group_of.get(gold_type, ""),
+        "gold_offered": int(gold_type in offered) if gold_type else "",
     }
-    row["gold_group"] = group_of.get(row["gold_type"], "")
     if not text:
         d = dc.Decision(
             "rejected", doc_types["schema_digest"], error="no Clear or Noisy line to read"
         )
     else:
-        state = {"item": doc_types["states"][DOC_TYPE_STATE]["item"], "text": text, "lines": used}
+        state = {"item": doc_types["item"], "text": text, "lines": used}
         d = client.decide(state, doc_types["questions"])
-    group, kind = d.answers.get("group"), d.answers.get("document_type")
-    row["group"] = group.choice if group else ""
-    for g in doc_types["groups"]:
-        row[f"P_group_{g}"] = group.probabilities.get(g, "") if group else ""
+    kind = d.answers.get("document_type")
     row["document_type"] = kind.choice if kind else ""
     row["type_group"] = group_of.get(row["document_type"], "")
     row["confidence"] = kind.confidence if kind else ""
@@ -665,29 +725,33 @@ def decide_doc_type(
 
 
 def summarise_doc_types(rows: Sequence[Mapping[str, Any]], abstain: str) -> Dict[str, Any]:
+    """Counts and, where gold is given, accuracy over all graded documents and over those whose
+    catalogue type the text view offers (a photograph's type cannot be chosen from text)."""
     ok = [r for r in rows if r.get("status") == "ok"]
     latencies = sorted(float(r["latency_ms"]) for r in ok if str(r.get("latency_ms", "")) != "")
     out: Dict[str, Any] = {
         "documents": len(rows),
         "statuses": dict(Counter(str(r.get("status")) for r in rows)),
         "latency_ms_p50": latencies[len(latencies) // 2] if latencies else None,
-        "groups": dict(Counter(r["group"] for r in ok)),
         "types": dict(Counter(r["document_type"] for r in ok)),
         "abstained": round(sum(r["document_type"] == abstain for r in ok) / len(ok), 4)
         if ok
         else None,
-        "group_disagrees_with_type": sum(r["group"] != r["type_group"] for r in ok),
     }
     graded = [r for r in ok if r.get("gold_type")]
     if graded:
+        offered = [r for r in graded if str(r.get("gold_offered")) == "1"]
         out["gold"] = {
             "documents": len(graded),
+            "gold_not_offered": len(graded) - len(offered),
             "type_accuracy": round(
                 sum(r["document_type"] == r["gold_type"] for r in graded) / len(graded), 4
             ),
-            "group_accuracy": round(
-                sum(r["group"] == r["gold_group"] for r in graded) / len(graded), 4
-            ),
+            "type_accuracy_offered": round(
+                sum(r["document_type"] == r["gold_type"] for r in offered) / len(offered), 4
+            )
+            if offered
+            else None,
             "type_group_accuracy": round(
                 sum(r["type_group"] == r["gold_group"] for r in graded) / len(graded), 4
             ),
@@ -784,7 +848,7 @@ def main_doc_type(args: argparse.Namespace, parser: argparse.ArgumentParser) -> 
             "decision_revision": args.model_revision,
             "served_on": where,
             "decision_schema_digest": doc_types["schema_digest"],
-            "list": f"{DOC_TYPE_LIST.relative_to(REPO_ROOT)} v{doc_types['version']}",
+            "list": f"{DOC_TYPE_LIST.relative_to(REPO_ROOT)} v{doc_types['version']} ({TEXT_VIEW})",
             "max_chars": args.max_chars,
             "gold": str(args.gold) if args.gold else None,
             "accept_at": args.accept_at,

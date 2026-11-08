@@ -1148,3 +1148,31 @@ Documentation only; no code, test or configuration change.
   * the comment for #3, delivered in chat.
 * Not pushed: files delivered as per-repo archives.
 
+## 2026-11-08 (round 2) — #3: the text-only view of the type list; the drift fix (atrium-project#83)
+
+* **Asked (K4TEL):** keyword-extract works with text and no image; fix the failing GHA runs.
+* **CI on `810e7b7`:**
+  * **Paradata Drift:** `tests/test_vendored_decision_parity.py` nested `ADOPTED` per file, and the hub's
+    `tools/ci/vendored_pins.py` reads one flat `ADOPTED` per pin file.
+  * **API Meta-Contract:** GitHub's 504 on release downloads, reproduced; re-run it.
+* **Written (not pushed):**
+  * **The pins, split:**
+    * `tests/test_vendored_decision_parity.py`: the client, page-classification `39a7bea`, `v1.13.0-beta`;
+    * `tests/test_vendored_doctype_parity.py`: the list, digital-convert `2bb3f3c`, `v1.4.6-beta` (prepared there).
+    * `.github/workflows/para-drift.yml`: `vendored-from: atrium-nlp-enrich atrium-page-classification
+      atrium-digital-convert`.
+  * **`dm_run.py --doc-type`:**
+    * the text-only view: `document_type` over the 6 written types and `unspecified`, no `group`; derived from v1, or
+      read from v2's `document_text`, with the same digest `34d45440…`;
+    * `gold_offered`; `gold_not_offered`; accuracy over the offered types.
+  * **Tests:** `tests/test_dm_doc_type.py` (11).
+* **Checked:**
+  * the full suite;
+  * ruff;
+  * the drift job's steps, locally: `vendored_pins.py list` with the three owners, then each pin test with its owner
+    checked out at the adopted commit beside it. 15 passed, no skips.
+  * `--doc-type` on the 3 synthetic documents against the fake server: 7 options, no `group`, no image.
+* **Records:** `plans/3.plan.md` (Phase A′), `digests/3.digest.md`.
+* **Yours:** push after digital-convert. Once digital-convert's v2 commit is on GitHub, re-vendor v2 and move the
+  list pin.
+* Not pushed: files delivered as per-repo archives.
