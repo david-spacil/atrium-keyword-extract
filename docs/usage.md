@@ -12,6 +12,7 @@ controlled kind from the command line, and use the Docker images. What each kind
 - [Run the controlled kind from the command line](#run-the-controlled-kind-from-the-command-line)
 - [Run the Docker images](#run-the-docker-images)
 - [The command line and the service](#the-command-line-and-the-service): where they differ
+- [Decision models, offline](#decision-models-offline): `dm_run.py`, the descent tree and the document type
 
 ## Set it up
 
@@ -243,3 +244,87 @@ differ:
 KER (`legacy`) counts lemmas, and where they come from depends on the input. CoNLL-U and TEITOK give every noun's,
 proper noun's and adjective's lemma. A record gives `lines[].lemma`, which no ATRIUM tool writes today. A CSV or a
 `.txt` gives none. The pages' lemmas come from a record only.
+
+## Decision models, offline
+
+`dm_run.py` tries decision models on two questions of [#3](https://github.com/ufal/atrium-keyword-extract/issues/3)
+(atrium-project#83). A decision model reads a state, such as a text, and questions with fixed options, and returns
+a probability for every option; it writes no text. The tool is offline and experimental: the service does not run
+it, no image's entry point reaches it, and nothing it finds reaches the record. Run it from the repository root,
+set up as [above](#set-it-up).
+
+### The descent tree: `--dump-tree`
+
+A decision model cannot take the whole vocabulary at once (4,711 terms; a choice takes at most 255 options), so the
+line mode of #3 is to walk down it, one choice a step: is the line content at all, which facet, the geographic
+gate, which group, then down the terms' own tree. Every step also offers `none_of_these`, so an answer is always a
+vocabulary term or unresolved. `--dump-tree OUT` builds that tree and writes it as JSON; the line mode itself
+(`--lines`) is not written yet and exits 2.
+
+```bash
+python3 dm_run.py --dump-tree /tmp/dm_tree.json
+```
+
+The tree is built from files the vocabulary build already writes (`data_samples/vocab/union_nested.json`,
+`specificity_pairs.csv`, `amcr_flat.json`, `data_samples/taxonomy_config.json`) and from the prompt's blocks and
+settings (`prompts/system_prompt.txt`, `llm_config.txt`). The file records each input's SHA-256, the questions'
+wording, every node and the tree's statistics, and a digest of all of it but the time it was made. The command
+prints the digest and the statistics. How a term's parent is chosen, and how a node with too many options is
+split, is in the module's docstring.
+
+### The document type: `--doc-type`
+
+`--doc-type` asks a decision model the AMČR document type (`dokument_typ`) of each document, from its text and
+never an image. The input is a `DOC_LINE_CATEG` folder, one line table per document with its `text` and `categ`
+columns, or one such CSV. A request carries the document's `Clear` and `Noisy` lines, in order, whole lines up to
+`--max-chars`.
+
+The list of types is atrium-digital-convert's `decisions/document_type.v2.json`, which it builds from this
+repository's `amcr_flat.json`; the copy here is pinned by its SHA-256 (`tests/test_vendored_doctype_parity.py`).
+The client, `decision_client.py`, is atrium-page-classification's, pinned the same way
+(`tests/test_vendored_decision_parity.py`). The tool asks the list's text-only view, `document_text`: one
+`document_type` question over the 6 written-document types and `unspecified` (`neurčený dokument`, the abstain
+option), with no `group` question. Photographs, aerial photographs, plans, maps and drawings cannot be told from
+OCR text, so the view does not offer them. `dokument_typ` is withheld from the keyword vocabulary, so a type is
+never a keyword.
+
+```bash
+export DECISION_MODEL_URL=...      # the server; never recorded
+python3 dm_run.py --doc-type --input data_samples/DOC_LINE_CATEG --out /tmp/dm/DM_DOC_TYPE.csv \
+    --model clef-oQ8e --served-on ufal-endpoint
+```
+
+| Option                          | Meaning                                                                                                                       |
+|---------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `--input`                       | a `DOC_LINE_CATEG` folder (its `*.csv`) or one CSV (required)                                                                 |
+| `--out`                         | the table (default `result/dm/<stamp>_DM_DOC_TYPE.csv`)                                                                       |
+| `--max-chars`                   | the text a request carries, in whole lines (default 6000)                                                                     |
+| `--gold`                        | a CSV of `file,document_type` to score against; a type as its id, its HES number or its Czech label, from the whole list      |
+| `--accept-at`, `--review-below` | the lane thresholds, both or neither (below)                                                                                  |
+| `--resume`                      | continue `--out`, skipping the documents it holds; without it, an existing table stops the run                                |
+| `--url`, `--model`              | the server and the model (default `DECISION_MODEL_URL`, `DECISION_MODEL_NAME`)                                                |
+| `--model-revision`              | the served build or Hugging Face revision, for the paradata                                                                   |
+| `--served-on`                   | where the documents go: `cluster-job`, `ufal-endpoint`, `local` or `other` (default `local` for a loopback URL, else `other`) |
+| `--timeout`, `--retries`        | per request: seconds (default `DECISION_TIMEOUT_S`, else 120) and retries (default 2)                                         |
+| `--no-proxy`                    | ignore the proxy variables for this server                                                                                    |
+
+**The lanes.** With both thresholds, each row gets a `lane`: `accept` at or above `--accept-at`, `review` below
+`--review-below`, `escalate` in between. Each threshold is between 0 and 1, and `--review-below` is not above
+`--accept-at`. The thresholds belong to one model revision and one question wording, so set them on dev data.
+
+A bad option ends the run before the first request, with exit code 2: `--doc-type` without `--input`, a threshold
+out of range or without the other, no CSV at `--input`, or no server or model.
+
+It writes:
+
+* **The table**, `DM_DOC_TYPE.csv`, a row per document: `lines_used`, `lines_available` and `chars` (the text
+  sent); the chosen `document_type` with `type_group`, `confidence`, `top3`, `lane` and every offered type's
+  probability (`P_type_*`); the gold, `gold_type`, `gold_group` and `gold_offered` (whether the view offers that
+  type); and the request's `status`, `error`, `latency_ms`, `input_tokens`, `attempts` and `schema_digest`. Rows
+  are written as the answers come. A document with no `Clear` or `Noisy` line gets a `rejected` row and no request.
+* **The summary** beside it, the table's name ending in `.summary.json`: the statuses, the median latency, the
+  spread of types and the share that abstained; with gold, the type and type-group accuracy over every graded
+  document, and the type accuracy over those whose type the view offers.
+* **The paradata record** in `paradata/` beside it: program `keyword-extract`, components `decision_model` and
+  `amcr_vocab`, and the model, its revision, the list with its version and view, the digest, `--max-chars`,
+  `--gold` and the thresholds. The server is recorded by its kind (`--served-on`), never by its URL.

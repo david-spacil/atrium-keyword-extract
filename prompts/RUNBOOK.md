@@ -17,7 +17,7 @@ under the same `llm_config.txt` — the latter two through `llm_client_shared.py
 guardrail, the flags, the ids or the qualifier stripping). A test holds its untruncated prompt
 byte-identical to `prompt_full.txt`.
 
-### What is in this directory
+## What is in this directory
 
 | File                                                                                      | Kind      | Written by                            |
 |-------------------------------------------------------------------------------------------|-----------|---------------------------------------|

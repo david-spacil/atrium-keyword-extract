@@ -1176,3 +1176,33 @@ Documentation only; no code, test or configuration change.
 * **Yours:** push after digital-convert. Once digital-convert's v2 commit is on GitHub, re-vendor v2 and move the
   list pin.
 * Not pushed: files delivered as per-repo archives.
+
+## 2026-11-08 (round 3) — #3: digital-convert's list v2 adopted; review fixes (atrium-project#83)
+
+* **Asked (K4TEL):** the review's fixes to `dm_run.py`; adopt digital-convert's document-type list v2.
+* **Found:** the list pin named digital-convert `2bb3f3c` and called v1 "first released in v1.4.6-beta". That
+  tag's commit, `427b690`, has only v2, and no release carried v1; the sibling byte check always skipped, as
+  digital-convert's checkout has no v1. v1.4.6-beta itself was tagged, not released (GitHub's 504).
+* **Written (not pushed):**
+  * **The list:** `decisions/document_type.v2.json`, byte for byte from digital-convert `427b690`; v1 removed
+    (`git rm`). `dm_run.DOC_TYPE_LIST`, the module docstring and the `--doc-type` help name v2.
+  * **The pin:** `ADOPTED` digital-convert `427b690`, release `v1.4.7-beta`; `VENDORED` v2 (`8c1a2715…`). The
+    hub's `vendored_pins.py list` reads it.
+  * **The text view is unchanged:** its questions, item, offered types and digest (`34d45440…`) are the same from
+    v1 and from v2.
+  * **`dm_run.py --doc-type`:** `parser.error` for a threshold outside 0 to 1 or a `--review-below` above
+    `--accept-at`, before any request. Docstrings for `tree_stats`, `doc_type_columns` and `main_doc_type`.
+  * **Tests:** `tests/test_dm_doc_type.py` (+6; the v1 test now reads v2's own view): the refusals (exit 2),
+    thresholds in range, `--max-chars`.
+  * **Docs:** `docs/usage.md`, "Decision models, offline" (`--dump-tree`, `--doc-type`, the lanes, the outputs);
+    a pointer in `README.md`; the file map in `docs/development.md`; `prompts/RUNBOOK.md`'s skipped heading level.
+  * **`.github/workflows/para-drift.yml`:** the comment said the owners' `test` head; it is the owner at the
+    adopted commit. It names v2. Comment only.
+* **Checked:**
+  * the suite without `slow`: 1,187 passed, 1 skipped (the live LLM test);
+  * the pin tests with digital-convert at `427b690` beside this repository, no skips;
+  * ruff; the hub's `docs_check.py`.
+* **Yours:** push with the hub re-pin. No wait for digital-convert's release: para-drift compares the copy with
+  the owner at `427b690`, which is already on GitHub. `plans/3.plan.md` and `digests/3.digest.md` still cite v1
+  and `2bb3f3c` (history, left as written).
+* Committed locally, not pushed.

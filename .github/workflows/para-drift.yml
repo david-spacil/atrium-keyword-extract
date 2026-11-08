@@ -14,12 +14,15 @@ permissions:
 
 jobs:
   check-drift:
-    uses: ufal/atrium-project/.github/workflows/para-drift.reusable.yml@da7a066f5a1c1ecf024f9a8b82cca949a9ee0e91  # v1
+    uses: ufal/atrium-project/.github/workflows/para-drift.reusable.yml@4435ffbe75188a5d0a11c96180ca10efa616991d  # v1
     with:
-      hub-ref: da7a066f5a1c1ecf024f9a8b82cca949a9ee0e91
+      hub-ref: 4435ffbe75188a5d0a11c96180ca10efa616991d
       # atrium-project#72 B: api_util/teitok_read.py and bbox_scale.py are nlp-enrich's, pinned by
-      # tests/test_vendored_teitok_parity.py; the reusable compares them with nlp-enrich's `test`
-      # head, so a copy that falls behind turns red here. atrium-project#83: decision_client.py is
-      # page-classification's (tests/test_vendored_decision_parity.py) and decisions/document_type.v1.json
-      # digital-convert's (tests/test_vendored_doctype_parity.py), for dm_run.py --doc-type.
+      # tests/test_vendored_teitok_parity.py. atrium-project#83: decision_client.py is
+      # page-classification's (tests/test_vendored_decision_parity.py) and decisions/document_type.v2.json
+      # digital-convert's (tests/test_vendored_doctype_parity.py), for dm_run.py --doc-type. The
+      # reusable checks each owner out at the commit its pin file adopted (ADOPTED["commit"]) and
+      # compares the copies with it byte for byte, so a push to the owner never turns this
+      # repository red; how far the owner has moved on since (its `test` head) is a summary, not a
+      # failure (atrium-project#82 B).
       vendored-from: atrium-nlp-enrich atrium-page-classification atrium-digital-convert

@@ -15,7 +15,7 @@ requests) is not written yet.
 ``dokument_typ``, chosen by a decision model from its text alone, never an image: the document's
 ``Clear`` and ``Noisy`` lines, in order, whole lines up to ``--max-chars``. The list is the one
 atrium-digital-convert builds from this repository's ``amcr_flat.json`` and asks about PDF page
-images (its #8), vendored as ``decisions/document_type.v1.json`` and pinned in
+images (its #8), vendored as ``decisions/document_type.v2.json`` and pinned in
 ``tests/test_vendored_doctype_parity.py``; the client, ``decision_client.py``, is pinned from
 atrium-page-classification in ``tests/test_vendored_decision_parity.py``. This tool asks the list's
 **text-only view** (``document_text``): one ``document_type`` choice over the 6 written-document
@@ -487,6 +487,9 @@ def every_choice(tree: Mapping[str, Any]) -> List[Tuple[str, Optional[int], Dict
 def tree_stats(
     tree: Mapping[str, Any], edges: Mapping[str, int], dropped_groups: Sequence[str]
 ) -> Dict[str, Any]:
+    """The tree's shape, kept in the tree as ``stats``: its counts, how deep and how wide it gets, the
+    parent edges by how they were found (*edges*), the chunked and geo-gated nodes, how many choices
+    it can ask and the most options in one, and the hand count of 11-05 beside them."""
     nodes = tree["nodes"]
     term_nodes = [n for n in nodes.values() if n["kind"] == "term"]
 
@@ -532,7 +535,7 @@ def tree_stats(
 
 # ── document type (#3; the list is shared with digital-convert#8) ────────────────────────────
 
-DOC_TYPE_LIST = REPO_ROOT / "decisions" / "document_type.v1.json"
+DOC_TYPE_LIST = REPO_ROOT / "decisions" / "document_type.v2.json"
 TEXT_VIEW = "document_text"  # the list's view for an item read as OCR text, never an image
 TEXT_GROUPS = ("text",)  # the types OCR text can tell: the written documents
 TEXT_INPUTS = {
@@ -649,6 +652,8 @@ def _gold_types(path: Path, doc_types: Mapping[str, Any]) -> Dict[str, str]:
 
 
 def doc_type_columns(doc_types: Mapping[str, Any]) -> List[str]:
+    """The header of ``DM_DOC_TYPE.csv``: the document and its text, the answer, the gold, one
+    ``P_type_*`` column per type the view offers, then the request's status and operations."""
     types = [f"P_type_{t['id']}" for t in doc_types["types"]]
     return (
         ["file", "lines_used", "lines_available", "chars"]
@@ -813,12 +818,24 @@ def run_doc_types(
 
 
 def main_doc_type(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    """``--doc-type``: check the options, decide every document of ``--input`` into ``--out``, then
+    write its summary beside it and the run's paradata under ``paradata/`` there."""
     import decision_client as dc  # noqa: PLC0415
 
     if not args.input:
         parser.error("--doc-type needs --input (a DOC_LINE_CATEG directory or one CSV)")
+    # Refused here, before any request: decision_client.lane() raises on a bad pair only at the
+    # first answer, after a model call has been paid for.
     if (args.accept_at is None) != (args.review_below is None):
         parser.error("--accept-at and --review-below go together")
+    if args.accept_at is not None:
+        for flag, value in (("--accept-at", args.accept_at), ("--review-below", args.review_below)):
+            if not 0.0 <= value <= 1.0:
+                parser.error(f"{flag} is a probability, between 0 and 1 (got {value})")
+        if args.review_below > args.accept_at:
+            parser.error(
+                f"--review-below ({args.review_below}) must not exceed --accept-at ({args.accept_at})"
+            )
     inputs = [args.input] if args.input.is_file() else sorted(args.input.glob("*.csv"))
     if not inputs:
         parser.error(f"no CSV under {args.input}")
@@ -923,15 +940,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     doc.add_argument(
         "--doc-type",
         action="store_true",
-        help="ask each document's AMČR type from its text (decisions/document_type.v1.json)",
+        help="ask each document's AMČR type from its text (document_type.v2.json, its text view)",
     )
     doc.add_argument("--input", type=Path, help="a DOC_LINE_CATEG directory or one CSV")
     doc.add_argument("--max-chars", type=int, default=6000, help="the text budget per document")
     doc.add_argument(
         "--gold", type=Path, help="a CSV of file,document_type (id, HES or Czech label)"
     )
-    doc.add_argument("--accept-at", type=float, help="lane threshold (set on dev)")
-    doc.add_argument("--review-below", type=float, help="lane threshold (set on dev)")
+    doc.add_argument(
+        "--accept-at", type=float, help="lane threshold, 0 to 1 (set on dev; with --review-below)"
+    )
+    doc.add_argument(
+        "--review-below", type=float, help="lane threshold, 0 to --accept-at (set on dev)"
+    )
     doc.add_argument(
         "--out", type=Path, help="the table (default result/dm/<stamp>_DM_DOC_TYPE.csv)"
     )

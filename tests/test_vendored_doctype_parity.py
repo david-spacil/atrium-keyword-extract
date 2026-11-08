@@ -10,11 +10,13 @@ The copy is pinned by the SHA-256 of the digital-convert file it was taken from 
 normalised to ``\\n``). A mismatch means a local edit to a vendored file -- change the list in
 atrium-digital-convert and re-vendor -- or a re-vendor without updating the pin.
 
-To re-vendor: copy ``decisions/document_type.v<N>.json`` from a sibling ``../atrium-digital-convert``
+The copy is digital-convert's v2, with one view per input; ``dm_run.py`` reads its ``document_text``
+view. It replaces v1, which no digital-convert release carried; the text view and its digest are the
+same in both. To re-vendor: copy ``decisions/document_type.v<N>.json`` from a sibling ``../atrium-digital-convert``
 checkout, point ``dm_run.DOC_TYPE_LIST`` at it, run ``python3 tests/test_vendored_doctype_parity.py``
-and paste the printed pin over ``VENDORED`` and ``ADOPTED``. Commit the copy and the pins together
-(atrium-project docs/shared_components.md). digital-convert's v2 (one view per input) is the next
-adoption, once its commit is on GitHub.
+and paste the printed pin over ``VENDORED``; set ``ADOPTED`` to the digital-convert commit and the
+release that carry the file. Commit the copy and the pins together (atrium-project
+docs/shared_components.md).
 
 When an atrium-digital-convert checkout sits next to this repo with the same file, the copy is also
 compared with it byte for byte; the para-drift job checks the owner out at ``ADOPTED["commit"]``.
@@ -30,16 +32,17 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DIGITAL_CONVERT = REPO_ROOT.parent / "atrium-digital-convert"
 
-#: The owner revision the copy was taken from: the digital-convert commit of 2026-11-08 that added
-#: decisions/document_type.v1.json with the digest below, first released in v1.4.6-beta.
+#: The owner revision the copy was taken from: the digital-convert commit of 2026-11-08 on `test`
+#: that added decisions/document_type.v2.json with the digest below. Its tag v1.4.6-beta was never
+#: released (GitHub's release downloads answered 504), so the first release to carry it is v1.4.7-beta.
 ADOPTED = {
     "owner": "atrium-digital-convert",
-    "commit": "2bb3f3cb43027744cbc5a49cab468b51c22799fc",
-    "release": "v1.4.6-beta",
+    "commit": "427b690d66fd0ce1ce7b2454e9dd46fe719a4ca0",
+    "release": "v1.4.7-beta",
 }
 
 VENDORED = {
-    "decisions/document_type.v1.json": "56a876f0bc13fd3fe805a6600ea4de0c12bce475e8a43d7df2fe57e602063830",
+    "decisions/document_type.v2.json": "8c1a2715bc7ee0fc8b3fddfbb9222983302af647a86bca5ff6db1e620f0712d7",
 }
 
 
@@ -75,7 +78,7 @@ def test_adopted_names_an_immutable_owner_revision():
 
 def test_the_list_is_shared_with_this_repository():
     content = json.loads(
-        (REPO_ROOT / "decisions" / "document_type.v1.json").read_text(encoding="utf-8")
+        (REPO_ROOT / "decisions" / "document_type.v2.json").read_text(encoding="utf-8")
     )
     assert "ufal/atrium-keyword-extract" in content["shared_with"]
 
